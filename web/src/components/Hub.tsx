@@ -5,7 +5,8 @@
 import Link from "next/link";
 import { RequireAuth, useAuth } from "@/lib/auth";
 import { usePerms } from "@/lib/hooks";
-import { MODULES } from "@/lib/modules";
+import { ADMIN_MODULE, MODULES } from "@/lib/modules";
+import AnnouncementsFeed from "./Announcements";
 import { Badge, Header } from "./ui";
 
 function HubInner() {
@@ -27,6 +28,10 @@ function HubInner() {
             Salom, {me?.employee?.full_name?.split(" ")[1] ?? me?.name}!
           </h1>
           <p className="mt-3 max-w-2xl text-muted">Modulni tanlang. Har bir modulda o&apos;z bo&apos;limlari va vazifangizga mos imkoniyatlar bor.</p>
+        </div>
+
+        <div className="mb-8">
+          <AnnouncementsFeed />
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
@@ -58,6 +63,16 @@ function HubInner() {
             );
           })}
         </div>
+        {perms.admin && (
+          <Link href={ADMIN_MODULE.href} className="card card-hover mt-5 flex flex-wrap items-center gap-4 p-5">
+            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-surface-2 text-2xl">{ADMIN_MODULE.icon}</span>
+            <div className="flex-1">
+              <div className="text-lg font-semibold">{ADMIN_MODULE.title}</div>
+              <div className="text-sm text-muted">{ADMIN_MODULE.tagline}</div>
+            </div>
+            <span className="text-accent">Kirish →</span>
+          </Link>
+        )}
       </main>
     </>
   );

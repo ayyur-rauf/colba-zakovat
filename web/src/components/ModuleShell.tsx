@@ -14,7 +14,13 @@ function Shell({ moduleKey, children }: { moduleKey: ModuleDef["key"]; children:
   const pathname = usePathname();
   const perms = usePerms();
   const staff =
-    moduleKey === "zakovat" ? perms.zakovatTg || perms.zakovatScorer : moduleKey === "kitobxonlik" ? perms.kitobReviewer : false;
+    moduleKey === "zakovat"
+      ? perms.zakovatTg || perms.zakovatScorer
+      : moduleKey === "kitobxonlik"
+        ? perms.kitobReviewer
+        : moduleKey === "boshqaruv"
+          ? perms.admin
+          : false;
   const sections = mod.sections.filter((s) => !s.staffOnly || staff);
   // Faol bo'lim: maxsus andoza → modul bosh sahifasi (aniq moslik) → eng uzun mos prefiks
   const active =
@@ -50,7 +56,13 @@ function Shell({ moduleKey, children }: { moduleKey: ModuleDef["key"]; children:
           </nav>
         </div>
       </div>
-      <main className="mx-auto w-full max-w-7xl flex-1 space-y-5 px-4 py-6">{children}</main>
+      <main className="mx-auto w-full max-w-7xl flex-1 space-y-5 px-4 py-6">
+        {mod.adminOnly && !perms.admin ? (
+          <div className="card px-5 py-10 text-center text-muted">Bu bo&apos;lim faqat bosh admin uchun.</div>
+        ) : (
+          children
+        )}
+      </main>
     </>
   );
 }

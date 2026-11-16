@@ -163,3 +163,26 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f"{self.created_at:%Y-%m-%d %H:%M} {self.actor} {self.action}"
+
+
+class Announcement(models.Model):
+    """Tashkilotchilardan e'lon. module bo'sh bo'lsa — umumiy e'lon."""
+
+    title = models.CharField("sarlavha", max_length=200)
+    body = models.TextField("matn", blank=True)
+    module = models.CharField("modul", max_length=20, choices=Module.choices, default=Module.CORE)
+    pinned = models.BooleanField("yuqorida mahkamlangan", default=False)
+    is_active = models.BooleanField("ko'rinadi", default=True)
+    expires_at = models.DateTimeField("ko'rinish muddati", null=True, blank=True,
+                                      help_text="Bo'sh bo'lsa — qo'lda o'chirilguncha ko'rinadi")
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+                               related_name="+", verbose_name="muallif")
+    created_at = models.DateTimeField("yaratilgan", default=timezone.now)
+
+    class Meta:
+        verbose_name = "e'lon"
+        verbose_name_plural = "e'lonlar"
+        ordering = ["-pinned", "-created_at"]
+
+    def __str__(self):
+        return self.title

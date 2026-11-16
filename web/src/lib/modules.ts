@@ -10,12 +10,14 @@ export type ModuleSection = {
 };
 
 export type ModuleDef = {
-  key: "zakovat" | "kitobxonlik" | "munozara" | "sport";
+  key: "zakovat" | "kitobxonlik" | "munozara" | "sport" | "boshqaruv";
   title: string;
   icon: string;
   href: string;
   tagline: string;
   ready: boolean;
+  /** Faqat bosh admin ko'radi (menyuda va markazda) */
+  adminOnly?: boolean;
   sections: ModuleSection[];
 };
 
@@ -69,4 +71,22 @@ export const MODULES: ModuleDef[] = [
   },
 ];
 
-export const moduleByKey = (key: ModuleDef["key"]) => MODULES.find((m) => m.key === key)!;
+export const ADMIN_MODULE: ModuleDef = {
+  key: "boshqaruv",
+  title: "Boshqaruv",
+  icon: "⚙️",
+  href: "/boshqaruv",
+  tagline: "Xodimlar, akkauntlar, rollar, mavsumlar, e'lonlar va harakatlar jurnali",
+  ready: true,
+  adminOnly: true,
+  sections: [
+    { href: "/boshqaruv", title: "Xodimlar" },
+    { href: "/boshqaruv/accounts", title: "Akkauntlar" },
+    { href: "/boshqaruv/roles", title: "Rollar" },
+    { href: "/boshqaruv/seasons", title: "Mavsumlar" },
+    { href: "/boshqaruv/announcements", title: "E'lonlar" },
+    { href: "/boshqaruv/audit", title: "Jurnal" },
+  ],
+};
+
+export const moduleByKey = (key: ModuleDef["key"]) => [...MODULES, ADMIN_MODULE].find((m) => m.key === key)!;

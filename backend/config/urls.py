@@ -10,6 +10,7 @@ admin.site.index_title = "Boshqaruv paneli"
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("accounts.urls")),
+    path("api/", include("core.urls")),
     path("api/zakovat/", include("zakovat.urls")),
     path("api/kitob/", include("kitobxonlik.urls")),
 ]

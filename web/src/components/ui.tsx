@@ -5,7 +5,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { MODULES } from "@/lib/modules";
+import { usePerms } from "@/lib/hooks";
+import { ADMIN_MODULE, MODULES } from "@/lib/modules";
 
 type Variant = "primary" | "ghost" | "danger" | "success" | "soft";
 
@@ -153,6 +154,8 @@ export function Logo({ size = 36 }: { size?: number }) {
 export function Header() {
   const { me, logout } = useAuth();
   const pathname = usePathname();
+  const { admin } = usePerms();
+  const nav = admin ? [...MODULES, ADMIN_MODULE] : MODULES;
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-bg-elev/85 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center gap-6 px-4 py-3">
@@ -161,7 +164,7 @@ export function Header() {
           <span className="hidden sm:inline">Colba</span>
         </Link>
         <nav className="flex flex-1 items-center gap-1 overflow-x-auto">
-          {MODULES.map((m) => {
+          {nav.map((m) => {
             const active = pathname.startsWith(m.href);
             return (
               <Link

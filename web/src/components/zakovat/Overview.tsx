@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { useApi, usePerms } from "@/lib/hooks";
 import type { Game, SeasonStandings, TeamListItem } from "@/lib/types";
 import { Card, CardHeader, Empty, formatDate, LinkButton, Notice, Stat } from "../ui";
+import AnnouncementsFeed from "../Announcements";
 import { GameStatusBadge, PlaceCell } from "./common";
 
 export default function ZakovatOverview() {
@@ -29,6 +30,8 @@ export default function ZakovatOverview() {
   return (
     <>
       <Notice error={games.error ?? standings.error} onClose={() => games.setError(null)} />
+
+      <AnnouncementsFeed module="zakovat" title="Zakovat e'lonlari" />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="O'tkazilgan turlar" value={`${played} / ${leagueTotal}`} hint="liga o'yinlari" />

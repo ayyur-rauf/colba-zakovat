@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { useAction, useApi, usePerms } from "@/lib/hooks";
 import type { Book, ReadingRound } from "@/lib/types";
 import { Button, Card, CardHeader, Empty, Field, formatDate, Notice, PageTitle } from "../ui";
+import AnnouncementsFeed from "../Announcements";
 import { openProtectedFile, RoundStatusBadge } from "./common";
 
 const STEPS = ["draft", "voting", "reading", "grading", "done"] as const;
@@ -27,6 +28,7 @@ export default function KitobRounds() {
         actions={org && <Button onClick={() => setCreating(!creating)}>+ Yangi tur</Button>}
       />
       <Notice error={act.error ?? rounds.error} notice={act.notice} onClose={act.clear} />
+      <AnnouncementsFeed module="kitobxonlik" title="Kitobxonlik e'lonlari" />
       {creating && (
         <NewRound
           act={act}

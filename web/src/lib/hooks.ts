@@ -81,6 +81,7 @@ export function usePerms() {
   const { me, zakovat } = useAuth();
   const kitobOrganizer = hasRole(me, "organizer", "kitobxonlik");
   return {
+    admin: hasRole(me, "admin", "core"),
     zakovatTg: !!zakovat?.is_tg,
     zakovatScorer: !!zakovat?.is_scorer,
     kitobOrganizer,

@@ -1,6 +1,7 @@
+from django import forms
 from django.contrib import admin
 
-from .models import AuditLog, PointsEntry, RoleAssignment, Season
+from .models import Announcement, AuditLog, PointsEntry, RoleAssignment, Season
 from .services import log_action
 
 
@@ -17,6 +18,22 @@ class RoleAssignmentAdmin(admin.ModelAdmin):
     search_fields = ("user__employee__full_name", "user__username")
     autocomplete_fields = ("user",)
     readonly_fields = ("granted_by", "created_at")
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+
+        class Form(form):
+            def clean(self):
+                data = super().clean()
+                dup = RoleAssignment.objects.filter(user=data.get("user"), role=data.get("role"),
+                                                    module=data.get("module"), season=data.get("season"))
+                if self.instance.pk:
+                    dup = dup.exclude(pk=self.instance.pk)
+                if dup.exists():
+                    raise forms.ValidationError("Bu rol allaqachon berilgan.")
+                return data
+
+        return Form
 
     def save_model(self, request, obj, form, change):
         if not obj.granted_by_id:
@@ -65,3 +82,9 @@ class AuditLogAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(Announcement)
+class AnnouncementAdmin(admin.ModelAdmin):
+    list_display = ("title", "module", "pinned", "is_active", "author", "created_at")
+    list_filter = ("module", "pinned", "is_active")

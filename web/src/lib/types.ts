@@ -236,3 +236,28 @@ export const QUESTION_STATUS: Record<QuestionStatus, string> = {
   approved: "Tasdiqlangan",
   used: "Ishlatilgan",
 };
+
+// ---------------------------------------------------------------- E'lonlar
+
+export type Announcement = {
+  id: number;
+  title: string;
+  body: string;
+  module: "core" | "zakovat" | "kitobxonlik" | "munozara" | "sport";
+  pinned: boolean;
+  is_active: boolean;
+  expires_at: string | null;
+  created_at: string;
+  author: string | null;
+  can_edit: boolean;
+};
+
+export type AnnouncementList = { can_post: Announcement["module"][]; items: Announcement[] };
+
+export const MODULE_LABEL: Record<Announcement["module"], string> = {
+  core: "Umumiy",
+  zakovat: "Zakovat",
+  kitobxonlik: "Kitobxonlik",
+  munozara: "Munozara",
+  sport: "Sport",
+};

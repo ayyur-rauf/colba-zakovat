@@ -19,7 +19,7 @@ from django.core.files.base import ContentFile
 from accounts.models import Branch, Employee, User
 from kitobxonlik import services as ksvc
 from kitobxonlik.models import Book, ReadingRound, SeasonConfig
-from core.models import Module, PointsEntry, Role, RoleAssignment, Season
+from core.models import Announcement, Module, PointsEntry, Role, RoleAssignment, Season
 from zakovat import services as svc
 from zakovat.models import Game, Question, Team
 
@@ -263,9 +263,30 @@ class Command(BaseCommand):
         for role, module in ((Role.TG_MEMBER, Module.ZAKOVAT), (Role.SCORER, Module.ZAKOVAT),
                              (Role.ORGANIZER, Module.KITOBXONLIK)):
             RoleAssignment.objects.create(user=staff, role=role, module=module, granted_by=admin)
+        # Bosh admin (sayt orqali), tasdiq kutayotgan akkaunt va e'lonlar
+        admin_emp = Employee.objects.create(full_name="Demo Admin", branch=branches[0], position="Bosh admin",
+                                            email="admin@demo.colba.uz")
+        site_admin = User(username="demo_admin", employee=admin_emp, display_name=admin_emp.full_name,
+                          status=User.Status.ACTIVE)
+        site_admin.set_unusable_password()
+        site_admin.save()
+        RoleAssignment.objects.create(user=site_admin, role=Role.ADMIN, granted_by=admin)
+        Employee.objects.create(full_name="Yangi Kelgan Xodim", branch=branches[1], position="O'qituvchi",
+                                email="yangi@demo.colba.uz")
+        User.objects.create(username="demo_pending", display_name="Telegram: @begona_user",
+                            status=User.Status.PENDING)
+        Announcement.objects.filter(title__startswith="[Demo]").delete()
+        Announcement.objects.create(title="[Demo] 3-tur 21-noyabr, soat 15:00 da", module="zakovat", pinned=True,
+                                    body="Jamoalar tarkibini 20-noyabrgacha tasdiqlang. Joy: Chilonzor filiali.",
+                                    author=staff)
+        Announcement.objects.create(title="[Demo] Noyabr kitobi uchun ovoz berish davom etmoqda",
+                                    module="kitobxonlik", author=staff,
+                                    body="Ovoz berish 4 kundan keyin yopiladi.")
+
         with open(settings.BASE_DIR / "dev_login.txt", "a", encoding="utf-8") as f:
             f.write("\nSayt (http://localhost:3100) — email kod bilan kirish:\n"
                     "  tashkilotchi / hisob hay'ati: tg@demo.colba.uz\n"
+                    "  bosh admin (Boshqaruv bo'limi): admin@demo.colba.uz\n"
                     "  oddiy xodim (Bilimdonlar sardori): xodim1@demo.colba.uz\n"
                     "  Mahalliy rejimda kod sahifada avtomatik ko'rinadi.\n")
 

@@ -38,6 +38,12 @@ node node_modules/next/dist/bin/next start -p 3101 -H 127.0.0.1
 | `/kitobxonlik/grading` | izohlarni baholash |
 | `/kitobxonlik/leaderboard` | reyting |
 | `/munozara`, `/sport` | rejalashtirilgan bo'limlar |
+| `/boshqaruv` | (bosh admin) xodimlar va Excel yuklash |
+| `/boshqaruv/accounts` | tasdiq kutayotgan akkauntlar, bloklash |
+| `/boshqaruv/roles` | rollarni berish va olish |
+| `/boshqaruv/seasons` | mavsumlar, joriy mavsum |
+| `/boshqaruv/announcements` | e'lonlar (bosh sahifa va modullarda ko'rinadi) |
+| `/boshqaruv/audit` | harakatlar jurnali |
 
 ## Tashqi ko'rinishni o'zgartirish
 - **Ranglar, burchaklar, fon:** `src/app/globals.css` — boshidagi o'zgaruvchilar (`--bg`, `--accent`, ...).
