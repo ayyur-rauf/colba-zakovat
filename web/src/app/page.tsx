@@ -1,10 +1,13 @@
 import { Suspense } from "react";
-import Home from "@/components/Home";
+import Hub from "@/components/Hub";
+
+// Sahifa tizimga kirgandan keyin brauzerda chiziladi — oldindan chizish tekshiruvi kerak emas.
+export const instant = false;
 
 export default function Page() {
   return (
     <Suspense fallback={null}>
-      <Home />
+      <Hub />
     </Suspense>
   );
 }

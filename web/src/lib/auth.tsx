@@ -73,7 +73,7 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
     if (!loading && !me) router.replace(`/login?next=${encodeURIComponent(pathname)}`);
   }, [loading, me, router, pathname]);
   if (loading || !me) {
-    return <div className="p-10 text-center text-gray-500">Yuklanmoqda…</div>;
+    return <div className="p-10 text-center text-muted">Yuklanmoqda…</div>;
   }
   return <>{children}</>;
 }

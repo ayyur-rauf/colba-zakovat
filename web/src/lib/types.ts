@@ -108,3 +108,80 @@ export const GAME_STATUS: Record<GameStatus, string> = {
   final: "Yakuniy natija",
   cancelled: "Bekor qilingan",
 };
+
+export type TeamListItem = TeamBrief & { members: number };
+
+export type Registration = {
+  id: number;
+  team: TeamBrief;
+  status: "pending" | "approved" | "waitlist" | "rejected" | "withdrawn";
+  table_number: number | null;
+  created_at: string;
+};
+
+export type SeasonStandings = {
+  season: { id: number; name: string };
+  rows: { place: number | null; team: TeamBrief; points: number; rating_j: number; tie_group: number | null }[];
+};
+
+export const TEAM_STATUS: Record<string, string> = {
+  draft: "Qoralama",
+  pending: "Tasdiq kutilmoqda",
+  active: "Faol",
+  withdrawn: "Chiqib ketgan",
+  disqualified: "Chetlatilgan",
+};
+
+export const REG_STATUS: Record<Registration["status"], string> = {
+  pending: "Ko'rib chiqilmoqda",
+  approved: "Tasdiqlangan",
+  waitlist: "Navbatda",
+  rejected: "Rad etilgan",
+  withdrawn: "Bekor qilingan",
+};
+
+// ---------------------------------------------------------------- Kitobxonlik
+
+export type Book = { id: number; title: string; author: string; description: string; cover: string | null };
+
+export type RoundStatus = "draft" | "voting" | "reading" | "grading" | "done";
+
+export type ReadingRound = {
+  id: number;
+  title: string;
+  status: RoundStatus;
+  candidates: Book[];
+  vote_ends: string | null;
+  votes: Record<string, number> | null;
+  my_vote: number | null;
+  selected_book: Book | null;
+  reading_days: number;
+  reading_starts: string | null;
+  my_deadline: string | null;
+  min_review_length: number;
+  criteria: { id: number; name: string; max_points: number }[];
+  my_review: { id: number; status: string; submitted_at: string; text: string; has_file: boolean } | null;
+  can_read: boolean;
+};
+
+export type ReviewForGrading = {
+  id: number;
+  author: { id: number; name: string };
+  text: string;
+  has_file: boolean;
+  submitted_at: string;
+  status: "submitted" | "approved";
+  grades_count: number;
+  average: string | null;
+  my_grade: { comment: string; total: number; scores: Record<string, number> } | null;
+};
+
+export type LeaderRow = { place: number; user: { id: number; name: string; branch: string | null }; points: number };
+
+export const ROUND_STATUS: Record<RoundStatus, string> = {
+  draft: "Qoralama",
+  voting: "Ovoz berish",
+  reading: "O'qish",
+  grading: "Baholash",
+  done: "Yakunlangan",
+};
