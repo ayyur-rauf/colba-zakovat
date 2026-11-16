@@ -44,6 +44,7 @@ export type Game = {
   rounds: number;
   questions_per_round: number;
   hide_standings: boolean;
+  timer_seconds: number;
   approved_teams: number;
   my_registration?: { id: number; status: string; table_number: number | null } | null;
 };
@@ -82,12 +83,15 @@ export type Standing = {
   eligible: boolean;
 };
 
+export type TimerState = { seconds: number; running: boolean; remaining: number };
+
 export type Live = {
   game: Game;
   current_round: number;
   current_question: number;
   standings_hidden: boolean;
   standings: Standing[];
+  timer: TimerState;
 };
 
 export type Appeal = {
@@ -201,4 +205,34 @@ export const ROUND_STATUS: Record<RoundStatus, string> = {
   reading: "O'qish",
   grading: "Baholash",
   done: "Yakunlangan",
+};
+
+// ---------------------------------------------------------------- Savollar banki
+
+export type QuestionStatus = "draft" | "editing" | "approved" | "used";
+
+export type Question = {
+  id: number;
+  text: string;
+  answer: string;
+  accepted_answers: string;
+  comment: string;
+  source: string;
+  topic: string;
+  difficulty: number | null;
+  status: QuestionStatus;
+  author: string | null;
+  created_at: string;
+  assigned: { game: number; game_title: string; number: number } | null;
+};
+
+export type QuestionBank = { topics: string[]; counts: Record<QuestionStatus, number>; items: Question[] };
+
+export type GameQuestionSlot = { number: number; round: number; question: Question | null };
+
+export const QUESTION_STATUS: Record<QuestionStatus, string> = {
+  draft: "Qoralama",
+  editing: "Tahrirda",
+  approved: "Tasdiqlangan",
+  used: "Ishlatilgan",
 };

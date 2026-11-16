@@ -128,6 +128,10 @@ class Game(models.Model):
     current_round = models.PositiveSmallIntegerField("joriy raund", default=0)
     current_question = models.PositiveSmallIntegerField("joriy savol", default=0)
     hide_standings = models.BooleanField("katta ekranda reytingni yashirish", default=False)
+    # Taymer: ishlayotganda timer_ends_at to'ldirilgan; pauzada timer_remaining (soniya) saqlanadi
+    timer_seconds = models.PositiveSmallIntegerField("savolga vaqt (soniya)", default=60)
+    timer_ends_at = models.DateTimeField("taymer tugash vaqti", null=True, blank=True)
+    timer_remaining = models.PositiveSmallIntegerField("pauzadagi qolgan vaqt", null=True, blank=True)
     tiebreak_for = models.ForeignKey("self", on_delete=models.PROTECT, null=True, blank=True,
                                      related_name="tiebreaks", verbose_name="qaysi o'yin uchun qo'shimcha")
     tiebreak_for_season = models.BooleanField("mavsum reytingi uchun qo'shimcha o'yin", default=False)

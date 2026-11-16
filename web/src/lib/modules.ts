@@ -31,6 +31,7 @@ export const MODULES: ModuleDef[] = [
       { href: "/zakovat", title: "Umumiy" },
       { href: "/zakovat/games", title: "O'yinlar", match: /^\/zakovat\/(games|\d+)/ },
       { href: "/zakovat/teams", title: "Jamoalar" },
+      { href: "/zakovat/questions", title: "Savollar banki", staffOnly: true },
       { href: "/zakovat/standings", title: "Mavsum reytingi" },
     ],
   },

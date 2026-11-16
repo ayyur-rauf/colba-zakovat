@@ -17,7 +17,8 @@ from core.models import Season
 
 from . import services as svc
 from .models import (
-    Appeal, AnswerMark, Game, GameRegistration, GameResult, LineupEntry, Team, TeamMember,
+    Appeal, AnswerMark, Game, GameQuestion, GameRegistration, GameResult, LineupEntry, Question, Team,
+    TeamMember,
 )
 
 RESULTS_VISIBLE = (Game.Status.PRELIMINARY, Game.Status.FINAL)
@@ -73,7 +74,7 @@ def game_brief(g: Game, my_team=None) -> dict:
         "starts_at": g.starts_at, "venue": g.venue, "max_teams": g.max_teams,
         "registration_deadline": g.effective_deadline,
         "rounds": g.rounds, "questions_per_round": g.questions_per_round,
-        "hide_standings": g.hide_standings,
+        "hide_standings": g.hide_standings, "timer_seconds": g.timer_seconds,
         "approved_teams": g.registrations.filter(status=GameRegistration.Status.APPROVED).count(),
     }
     if my_team is not None:
@@ -112,6 +113,16 @@ def live_standings(game: Game) -> list:
     return [{"place": ts.place, "team": {"id": ts.team_id, "name": names[ts.team_id]},
              "points": ts.points, "rating_j": ts.rating_j, "eligible": ts.eligible}
             for ts in score.ranking()]
+
+
+def question_payload(q: Question) -> dict:
+    gq = q.gamequestion_set.select_related("game").first() if q.pk else None
+    return {
+        "id": q.pk, "text": q.text, "answer": q.answer, "accepted_answers": q.accepted_answers,
+        "comment": q.comment, "source": q.source, "topic": q.topic, "difficulty": q.difficulty,
+        "status": q.status, "author": str(q.author) if q.author_id else None, "created_at": q.created_at,
+        "assigned": None if gq is None else {"game": gq.game_id, "game_title": gq.game.title, "number": gq.number},
+    }
 
 
 def appeal_payload(a: Appeal) -> dict:
@@ -169,6 +180,7 @@ class GameUpdateSer(serializers.Serializer):
     rounds = serializers.IntegerField(min_value=1, max_value=10, required=False)
     questions_per_round = serializers.IntegerField(min_value=1, max_value=50, required=False)
     hide_standings = serializers.BooleanField(required=False)
+    timer_seconds = serializers.IntegerField(min_value=5, max_value=600, required=False)
     reason = serializers.CharField(required=False, allow_blank=True, default="")
 
 
@@ -214,6 +226,31 @@ class CopyLineupSer(serializers.Serializer):
     team_id = serializers.IntegerField()
     from_round = serializers.IntegerField(min_value=1)
     to_round = serializers.IntegerField(min_value=1)
+
+
+class QuestionSer(serializers.Serializer):
+    text = serializers.CharField(required=False)
+    answer = serializers.CharField(max_length=300, required=False)
+    accepted_answers = serializers.CharField(required=False, allow_blank=True)
+    comment = serializers.CharField(required=False, allow_blank=True)
+    source = serializers.CharField(required=False, allow_blank=True)
+    topic = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    difficulty = serializers.IntegerField(min_value=1, max_value=5, required=False, allow_null=True)
+    status = serializers.ChoiceField(choices=[c for c, _ in Question.Status.choices], required=False)
+
+
+class AssignSer(serializers.Serializer):
+    number = serializers.IntegerField(min_value=1)
+    question_id = serializers.IntegerField(required=False, allow_null=True)
+
+
+class AutofillSer(serializers.Serializer):
+    question_ids = serializers.ListField(child=serializers.IntegerField(), min_length=1)
+
+
+class TimerSer(serializers.Serializer):
+    action = serializers.ChoiceField(choices=["start", "pause", "reset"])
+    seconds = serializers.IntegerField(required=False, min_value=5, max_value=600)
 
 
 class TiebreakSer(serializers.Serializer):
@@ -367,6 +404,7 @@ class GameViewSet(ViewSet):
             "game": game_brief(game), "current_round": game.current_round,
             "current_question": game.current_question, "standings_hidden": hidden,
             "standings": [] if hidden else live_standings(game),
+            "timer": svc.timer_state(game),
         })
 
     @action(detail=True, methods=["post"])
@@ -450,6 +488,39 @@ class GameViewSet(ViewSet):
     def reopen(self, request, pk):
         d = validated(ReasonSer, request.data)
         return Response(game_brief(svc.reopen_game(self._game(pk), request.user, reason=d["reason"])))
+
+    @action(detail=True, methods=["get", "post"])
+    def questions(self, request, pk):
+        """O'yin savollari (raqam → savol). Ko'rish: o'yin xodimlari. Biriktirish: Tashkiliy guruh."""
+        game = self._game(pk)
+        if not svc.is_game_staff(request.user, game.season):
+            raise PermissionDenied("Savollarni faqat o'yin xodimlari ko'radi.")
+        if request.method == "POST":
+            d = validated(AssignSer, request.data)
+            q = get_object_or_404(Question, pk=d["question_id"]) if d.get("question_id") else None
+            svc.assign_question(game, request.user, d["number"], q)
+        assigned = {gq.number: gq.question for gq in game.questions.select_related("question")}
+        return Response([
+            {"number": n, "round": game.round_of(n),
+             "question": question_payload(assigned[n]) if assigned.get(n) else None}
+            for n in range(1, game.total_questions + 1)
+        ])
+
+    @action(detail=True, methods=["post"], url_path="questions/autofill")
+    def questions_autofill(self, request, pk):
+        d = validated(AutofillSer, request.data)
+        return Response({"assigned": svc.autofill_questions(self._game(pk), request.user, d["question_ids"])})
+
+    @action(detail=True, methods=["post"])
+    def timer(self, request, pk):
+        d = validated(TimerSer, request.data)
+        game = svc.control_timer(self._game(pk), request.user, d["action"], seconds=d.get("seconds"))
+        return Response(svc.timer_state(game))
+
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk):
+        d = validated(ReasonSer, request.data)
+        return Response(game_brief(svc.cancel_game(self._game(pk), request.user, reason=d["reason"])))
 
     @action(detail=True, methods=["post"])
     def tiebreak(self, request, pk):
@@ -576,3 +647,44 @@ class SeasonTiebreakView(APIView):
         tb = svc.create_tiebreak(season, request.user, d["team_ids"], starts_at=d["starts_at"],
                                  questions=d["questions"], venue=d["venue"])
         return Response(game_brief(tb), status=status.HTTP_201_CREATED)
+
+
+# ================================================================== savollar banki
+
+class QuestionViewSet(ViewSet):
+    """Savollar banki — faqat Tashkiliy guruh. ?q=matn &status= &topic= &free=1 (biriktirilmagan)."""
+
+    def _check(self, request):
+        if not svc.is_tg(request.user, None):
+            raise PermissionDenied("Savollar bankini faqat Tashkiliy guruh ko'radi.")
+
+    def list(self, request):
+        self._check(request)
+        qs = Question.objects.select_related("author__employee").order_by("-created_at")
+        p = request.query_params
+        if p.get("q"):
+            qs = qs.filter(Q(text__icontains=p["q"]) | Q(answer__icontains=p["q"]) | Q(topic__icontains=p["q"]))
+        if p.get("status"):
+            qs = qs.filter(status=p["status"])
+        if p.get("topic"):
+            qs = qs.filter(topic=p["topic"])
+        if p.get("free") in ("1", "true"):
+            qs = qs.exclude(status=Question.Status.USED).filter(gamequestion__isnull=True)
+        topics = sorted(t for t in Question.objects.values_list("topic", flat=True).distinct() if t)
+        counts = {c: Question.objects.filter(status=c).count() for c, _ in Question.Status.choices}
+        return Response({"topics": topics, "counts": counts,
+                         "items": [question_payload(q) for q in qs[:300]]})
+
+    def create(self, request):
+        d = validated(QuestionSer, request.data)
+        q = svc.save_question(request.user, **d)
+        return Response(question_payload(q), status=status.HTTP_201_CREATED)
+
+    def partial_update(self, request, pk):
+        d = validated(QuestionSer, request.data)
+        q = svc.save_question(request.user, get_object_or_404(Question, pk=pk), **d)
+        return Response(question_payload(q))
+
+    def destroy(self, request, pk):
+        svc.delete_question(request.user, get_object_or_404(Question, pk=pk))
+        return Response(status=status.HTTP_204_NO_CONTENT)

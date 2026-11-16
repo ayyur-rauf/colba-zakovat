@@ -18,6 +18,7 @@ export default function ZakovatGames() {
   const games = useApi<Game[]>("zakovat/games");
   const act = useAction();
   const [openId, setOpenId] = useState<number | null>(null);
+  const [editId, setEditId] = useState<number | null>(null);
   const [form, setForm] = useState<"none" | "game" | "schedule">("none");
 
   const reload = games.reload;
@@ -101,18 +102,42 @@ export default function ZakovatGames() {
                       Arizalar {openId === g.id ? "▴" : "▾"}
                     </Button>
                   )}
-                  {staff && g.approved_teams > 0 && (
-                    <LinkButton href={`/zakovat/${g.id}/sheet`} variant="primary">
-                      Jadval
-                    </LinkButton>
+                  {tg && g.status !== "cancelled" && (
+                    <LinkButton href={`/zakovat/${g.id}/questions`}>Savollar</LinkButton>
                   )}
-                  {g.approved_teams > 0 && (
+                  {staff && g.approved_teams > 0 && g.status !== "cancelled" && (
+                    <>
+                      <LinkButton href={`/zakovat/${g.id}/host`}>Pult</LinkButton>
+                      <LinkButton href={`/chop/${g.id}`} target="_blank">
+                        Blankalar
+                      </LinkButton>
+                      <LinkButton href={`/zakovat/${g.id}/sheet`} variant="primary">
+                        Jadval
+                      </LinkButton>
+                    </>
+                  )}
+                  {g.approved_teams > 0 && g.status !== "cancelled" && (
                     <LinkButton href={`/ekran/${g.id}`} target="_blank">
                       Ekran ↗
                     </LinkButton>
                   )}
+                  {tg && g.status !== "final" && g.status !== "cancelled" && (
+                    <Button variant="ghost" title="Tahrirlash" onClick={() => setEditId(editId === g.id ? null : g.id)}>
+                      ✎
+                    </Button>
+                  )}
                 </div>
               </div>
+              {editId === g.id && (
+                <EditGame
+                  game={g}
+                  act={act}
+                  onDone={() => {
+                    setEditId(null);
+                    reload();
+                  }}
+                />
+              )}
               {openId === g.id && <Registrations gameId={g.id} canApprove={tg} onChange={reload} />}
             </div>
           ))}
@@ -289,5 +314,86 @@ function ScheduleForm({ onDone, act }: { onDone: () => void; act: Act }) {
         </Button>
       </form>
     </Card>
+  );
+}
+
+
+function toLocalInput(iso: string | null) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function EditGame({ game, act, onDone }: { game: Game; act: Act; onDone: () => void }) {
+  const [v, setV] = useState({
+    title: game.title,
+    starts_at: toLocalInput(game.starts_at),
+    venue: game.venue,
+    max_teams: game.max_teams ? String(game.max_teams) : "",
+    timer_seconds: String(game.timer_seconds),
+    reason: "",
+  });
+  const set = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement>) => setV({ ...v, [k]: e.target.value });
+  const [late] = useState(() => new Date(game.starts_at).getTime() - Date.now() < 24 * 3600 * 1000);
+  const started = game.status !== "planned" && game.status !== "registration";
+
+  return (
+    <div className="border-t border-line bg-bg-elev/50 px-5 py-4">
+      <form
+        className="grid gap-4 md:grid-cols-3"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const body: Record<string, unknown> = { reason: v.reason };
+          if (v.title !== game.title) body.title = v.title;
+          if (v.starts_at !== toLocalInput(game.starts_at)) body.starts_at = new Date(v.starts_at).toISOString();
+          if (v.venue !== game.venue) body.venue = v.venue;
+          if ((v.max_teams ? Number(v.max_teams) : null) !== game.max_teams) body.max_teams = v.max_teams ? Number(v.max_teams) : null;
+          if (Number(v.timer_seconds) !== game.timer_seconds) body.timer_seconds = Number(v.timer_seconds);
+          if (Object.keys(body).length === 1) return onDone();
+          const ok = await act.run(() => api(`zakovat/games/${game.id}`, { method: "PATCH", body }), "O'yin yangilandi");
+          if (ok) onDone();
+        }}
+      >
+        <Field label="Nomi">
+          <input className="field" value={v.title} onChange={set("title")} />
+        </Field>
+        <Field label="Boshlanish vaqti">
+          <input className="field" type="datetime-local" value={v.starts_at} onChange={set("starts_at")} disabled={started} />
+        </Field>
+        <Field label="Joyi">
+          <input className="field" value={v.venue} onChange={set("venue")} />
+        </Field>
+        <Field label="Maksimal jamoalar">
+          <input className="field" type="number" min={1} value={v.max_teams} onChange={set("max_teams")} />
+        </Field>
+        <Field label="Savolga vaqt (soniya)">
+          <input className="field" type="number" min={5} max={600} value={v.timer_seconds} onChange={set("timer_seconds")} />
+        </Field>
+        <Field label={late ? "O'zgartirish sababi (majburiy)" : "O'zgartirish sababi"} hint={late ? "O'yinga 1 kundan kam qoldi — sana/joy o'zgarsa sabab kerak (Nizom 1.4)" : undefined}>
+          <input className="field" value={v.reason} onChange={set("reason")} />
+        </Field>
+        <div className="flex flex-wrap gap-2 md:col-span-3">
+          <Button type="submit" disabled={act.busy}>
+            Saqlash
+          </Button>
+          {!started && (
+            <Button
+              type="button"
+              variant="danger"
+              disabled={act.busy}
+              onClick={async () => {
+                const reason = window.prompt("O'yinni bekor qilish sababi:");
+                if (!reason?.trim()) return;
+                const ok = await act.run(() => api(`zakovat/games/${game.id}/cancel`, { method: "POST", body: { reason } }), "O'yin bekor qilindi");
+                if (ok) onDone();
+              }}
+            >
+              O&apos;yinni bekor qilish
+            </Button>
+          )}
+        </div>
+      </form>
+    </div>
   );
 }

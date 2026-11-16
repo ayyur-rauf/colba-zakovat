@@ -5,7 +5,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { errText, usePerms } from "@/lib/hooks";
 import { usePolling } from "@/lib/usePolling";
@@ -27,6 +27,8 @@ export default function ScoreSheet() {
   const pending = useRef(0);
   // Belgilar ketma-ket yuboriladi: tez ikki marta bosilganda server oxirgi bosishni oladi.
   const markQueue = useRef<Promise<unknown>>(Promise.resolve());
+  // Klaviatura kursori: qaysi jamoa (indeks) va qaysi savol
+  const [cursor, setCursor] = useState<{ t: number; q: number } | null>(null);
 
   const load = useCallback(async () => {
     if (pending.current > 0) return; // o'zgarish yuborilayotganda ustidan yozmaymiz
@@ -56,20 +58,9 @@ export default function ScoreSheet() {
     }
   }
 
-  if (!sheet || round === null) {
-    return <div className="p-10 text-center text-muted">{error ?? "Yuklanmoqda…"}</div>;
-  }
-
-  const g = sheet.game;
-  const qpr = g.questions_per_round;
-  const first = (round - 1) * qpr + 1;
-  const questions = Array.from({ length: qpr }, (_, i) => first + i);
-  const editable = g.status === "in_progress";
-  const lineupEditable = editable || g.status === "registration" || g.status === "planned";
-
-  function toggle(team: SheetTeam, q: number) {
-    if (!editable) return;
-    const next = team.answers[q - 1] !== true;
+  function setMark(team: SheetTeam, q: number, next: boolean) {
+    if (sheet?.game.status !== "in_progress") return;
+    if (team.answers[q - 1] === next) return;
     setSheet((s) =>
       s && {
         ...s,
@@ -83,6 +74,50 @@ export default function ScoreSheet() {
     const job = markQueue.current.catch(() => undefined).then(send);
     markQueue.current = job;
     run(() => job);
+  }
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!sheet || round === null || sheet.game.status !== "in_progress") return;
+      if ((e.target instanceof HTMLElement && e.target.closest("input, textarea, select"))) return;
+      const teams = sheet.teams;
+      const qpr = sheet.game.questions_per_round;
+      const firstQ = (round - 1) * qpr + 1;
+      const lastQ = firstQ + qpr - 1;
+      const c = cursor ?? { t: 0, q: Math.min(Math.max(sheet.current_question, firstQ), lastQ) };
+      const move = (t: number, q: number) => {
+        e.preventDefault();
+        setCursor({ t: (t + teams.length) % teams.length, q: Math.min(Math.max(q, firstQ), lastQ) });
+      };
+      if (e.key === "ArrowDown") move(c.t + 1, c.q);
+      else if (e.key === "ArrowUp") move(c.t - 1, c.q);
+      else if (e.key === "ArrowRight") move(c.t, c.q + 1);
+      else if (e.key === "ArrowLeft") move(c.t, c.q - 1);
+      else if (["1", "+", "Enter", "0", "-"].includes(e.key) && teams[c.t]) {
+        e.preventDefault();
+        setMark(teams[c.t], c.q, ["1", "+", "Enter"].includes(e.key));
+        // keyingi jamoaga; oxirgisidan keyin — keyingi savolning birinchi jamoasi
+        if (c.t + 1 < teams.length) setCursor({ t: c.t + 1, q: c.q });
+        else setCursor({ t: 0, q: Math.min(c.q + 1, lastQ) });
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
+  if (!sheet || round === null) {
+    return <div className="p-10 text-center text-muted">{error ?? "Yuklanmoqda…"}</div>;
+  }
+
+  const g = sheet.game;
+  const qpr = g.questions_per_round;
+  const first = (round - 1) * qpr + 1;
+  const questions = Array.from({ length: qpr }, (_, i) => first + i);
+  const editable = g.status === "in_progress";
+  const lineupEditable = editable || g.status === "registration" || g.status === "planned";
+
+  function toggle(team: SheetTeam, q: number) {
+    setMark(team, q, team.answers[q - 1] !== true);
   }
 
   const setCurrent = (n: number) => run(() => api(`zakovat/games/${id}/current`, { method: "POST", body: { number: n } }));
@@ -107,6 +142,10 @@ export default function ScoreSheet() {
           </h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <LinkButton href={`/zakovat/${id}/host`}>Boshlovchi pulti</LinkButton>
+          <LinkButton href={`/chop/${id}`} target="_blank">
+            Blankalar
+          </LinkButton>
           <LinkButton href={`/ekran/${id}`} target="_blank">
             Katta ekran ↗
           </LinkButton>
@@ -205,7 +244,7 @@ export default function ScoreSheet() {
             </tr>
           </thead>
           <tbody>
-            {sheet.teams.map((t) => {
+            {sheet.teams.map((t, ti) => {
               const counted = new Set(t.counted);
               const onStage = t.lineup.filter((l) => l.round_no === round).length;
               return (
@@ -230,7 +269,10 @@ export default function ScoreSheet() {
                     return (
                       <td key={q} className="px-1 py-1.5 text-center">
                         <button
-                          onClick={() => toggle(t, q)}
+                          onClick={() => {
+                            setCursor({ t: ti, q });
+                            toggle(t, q);
+                          }}
                           disabled={!editable}
                           title={isCounted ? "" : "Bu savolda 3 o'yinchidan kam — hisobga olinmaydi"}
                           className={`h-9 w-9 rounded-lg border text-base font-semibold transition ${
@@ -241,7 +283,9 @@ export default function ScoreSheet() {
                                 : "border-line bg-bg-elev text-muted/40"
                           } ${isCounted ? "" : "cell-uncounted opacity-50"} ${
                             q === sheet.current_question && editable ? "ring-2 ring-accent" : ""
-                          } ${editable ? "hover:scale-105" : "cursor-default"}`}
+                          } ${cursor && editable && cursor.t === ti && cursor.q === q ? "outline outline-2 outline-offset-2 outline-gold" : ""} ${
+                            editable ? "hover:scale-105" : "cursor-default"
+                          }`}
                         >
                           {v === true ? "✓" : v === false ? "✗" : "·"}
                         </button>
@@ -260,7 +304,8 @@ export default function ScoreSheet() {
         </table>
       </Card>
       <p className="text-xs text-muted">
-        Katakni bosing: ✓ to&apos;g&apos;ri ↔ ✗ noto&apos;g&apos;ri. Chiziqli katak — o&apos;sha savolda jamoada 3 o&apos;yinchidan kam bo&apos;lgan, ball
+        Katakni bosing: ✓ to&apos;g&apos;ri ↔ ✗ noto&apos;g&apos;ri. Klaviatura: strelkalar — katak tanlash, <b>1</b>/Enter — ✓, <b>0</b> — ✗
+        (keyin avtomatik keyingi jamoaga o&apos;tadi). Chiziqli katak — o&apos;sha savolda jamoada 3 o&apos;yinchidan kam bo&apos;lgan, ball
         hisobga olinmaydi (Nizom 3.6, 4.3). Jadval har {POLL_MS / 1000} soniyada yangilanadi.
       </p>
 

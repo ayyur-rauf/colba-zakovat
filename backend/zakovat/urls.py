@@ -6,6 +6,7 @@ from . import api
 router = SimpleRouter()
 router.register("teams", api.TeamViewSet, basename="zakovat-team")
 router.register("games", api.GameViewSet, basename="zakovat-game")
+router.register("questions", api.QuestionViewSet, basename="zakovat-question")
 
 urlpatterns = [
     path("me/", api.MeView.as_view(), name="zakovat-me"),

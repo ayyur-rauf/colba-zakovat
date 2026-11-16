@@ -21,7 +21,7 @@ from kitobxonlik import services as ksvc
 from kitobxonlik.models import Book, ReadingRound, SeasonConfig
 from core.models import Module, PointsEntry, Role, RoleAssignment, Season
 from zakovat import services as svc
-from zakovat.models import Game, Team
+from zakovat.models import Game, Question, Team
 
 DEMO_SEASON = "Demo 2026–2027"
 NAMES = [
@@ -131,6 +131,8 @@ class Command(BaseCommand):
                 t.members.all().delete()
             Team.objects.filter(season=old).delete()
             old.delete()
+        Question.objects.filter(gamequestion__isnull=True, comment__in=["Demo savol", ""],
+                                author__username="admin").delete()
         User.objects.filter(username__startswith="demo_").delete()
         Employee.objects.filter(email__endswith="@demo.colba.uz").delete()
 
@@ -224,6 +226,32 @@ class Command(BaseCommand):
         for t in teams[:3]:
             reg = svc.register_team(nov_game, t, t.captain, now=nov_game.starts_at - timedelta(days=5))
             svc.approve_registration(reg, admin)
+
+        # Savollar banki: namunaviy savollar; 3-turning 1-raundiga biriktiriladi
+        demo_q = [
+            ("O'zbekistonning eng uzun daryosi qaysi?", "Amudaryo", "Geografiya", 1),
+            ("\"Alpomish\" dostonida bosh qahramonning oti qanday nomlangan?", "Boychibor", "Adabiyot", 2),
+            ("Mendeleyev jadvalida birinchi element qaysi?", "Vodorod", "Kimyo", 1),
+            ("Ulug'bek rasadxonasi qaysi shaharda joylashgan?", "Samarqand", "Tarix", 1),
+            ("Inson tanasidagi eng katta a'zo qaysi?", "Teri", "Biologiya", 2),
+            ("Shaxmatda qaysi dona faqat diagonal bo'ylab yuradi?", "Fil", "Sport", 1),
+            ("\"Boburnoma\" qaysi tilda yozilgan?", "Turkiy (eski o'zbek) tilida", "Adabiyot", 3),
+            ("Yorug'lik tezligi taxminan qancha (km/s)?", "300 000", "Fizika", 2),
+            ("Abu Ali ibn Sinoning G'arbdagi nomi?", "Avitsenna", "Tarix", 2),
+            ("Qaysi sayyora \"Qizil sayyora\" deb ataladi?", "Mars", "Astronomiya", 1),
+            ("Futbol bo'yicha jahon chempionati necha yilda bir o'tkaziladi?", "4", "Sport", 1),
+            ("Alisher Navoiyning \"Xamsa\"si nechta dostondan iborat?", "5", "Adabiyot", 2),
+            ("Dunyodagi eng chuqur ko'l?", "Baykal", "Geografiya", 2),
+            ("DNK qo'shaloq spiral tuzilishini kimlar kashf etgan?", "Uotson va Krik", "Biologiya", 4),
+            ("Pi sonining birinchi uchta raqami?", "3,14", "Matematika", 1),
+            ("Qaysi qit'ada eng ko'p davlat bor?", "Afrika", "Geografiya", 3),
+        ]
+        for i, (text, answer, topic, diff) in enumerate(demo_q):
+            q = svc.save_question(admin, text=text, answer=answer, topic=topic, difficulty=diff,
+                                  status="approved" if i < 14 else "editing",
+                                  comment="Demo savol" if i % 4 == 0 else "")
+            if i < nov_game.questions_per_round:
+                svc.assign_question(nov_game, admin, i + 1, q)
 
         # Sayt orqali kirish uchun demo tashkilotchi (email kod bilan)
         staff_emp = Employee.objects.create(full_name="Demo Tashkilotchi", branch=branches[0],

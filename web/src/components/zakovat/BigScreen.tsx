@@ -7,20 +7,23 @@ import { useParams } from "next/navigation";
 import { useCallback, useState } from "react";
 import { api } from "@/lib/api";
 import { usePolling } from "@/lib/usePolling";
+import { fmtSeconds, useCountdown } from "@/lib/useCountdown";
 import { RequireAuth } from "@/lib/auth";
 import { Logo } from "../ui";
 import type { Live } from "@/lib/types";
 
-const POLL_MS = 3000;
+const POLL_MS = 1500;
 
 function Inner() {
   const { id } = useParams<{ id: string }>();
   const [live, setLive] = useState<Live | null>(null);
   const [offline, setOffline] = useState(false);
+  const [receivedAt, setReceivedAt] = useState(0);
 
   const load = useCallback(async () => {
     try {
       setLive(await api<Live>(`zakovat/games/${id}/live`));
+      setReceivedAt(Date.now());
       setOffline(false);
     } catch {
       setOffline(true);
@@ -28,6 +31,7 @@ function Inner() {
   }, [id]);
 
   usePolling(load, POLL_MS);
+  const timer = useCountdown(live?.timer, receivedAt);
 
   if (!live) return <div className="min-h-screen" />;
 
@@ -50,7 +54,7 @@ function Inner() {
       </header>
 
       {g.status === "in_progress" && (
-        <section className="mt-10 grid grid-cols-2 gap-4 lg:gap-8">
+        <section className="mt-10 grid grid-cols-3 gap-4 lg:gap-8">
           <div className="card p-6 lg:p-8">
             <div className="text-xl text-muted">Raund</div>
             <div className="text-7xl font-bold leading-none lg:text-[9rem]">{live.current_round}</div>
@@ -60,6 +64,18 @@ function Inner() {
             <div className="glow-text text-7xl font-bold leading-none whitespace-nowrap lg:text-[9rem]">
               {live.current_question}
               <span className="text-3xl text-muted lg:text-5xl"> / {total}</span>
+            </div>
+          </div>
+          <div
+            className={`card p-6 lg:p-8 ${timer.left <= 10 && timer.left > 0 ? "border-danger/60" : ""}`}
+          >
+            <div className="text-xl text-muted">Vaqt</div>
+            <div
+              className={`text-7xl font-bold tabular-nums leading-none lg:text-[9rem] ${
+                timer.left <= 10 && timer.left > 0 ? "animate-pulse text-danger" : timer.left === 0 ? "text-muted" : ""
+              }`}
+            >
+              {fmtSeconds(timer.left)}
             </div>
           </div>
         </section>

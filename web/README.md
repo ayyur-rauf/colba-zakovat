@@ -27,7 +27,11 @@ node node_modules/next/dist/bin/next start -p 3101 -H 127.0.0.1
 | `/zakovat/games` | o'yinlar, arizalar, yangi o'yin, mavsum jadvali |
 | `/zakovat/teams` | jamoalar, tarkib, tasdiqlash |
 | `/zakovat/standings` | mavsum reytingi |
-| `/zakovat/[id]/sheet` | hisob hay'ati jadvali, tarkib, apellyatsiyalar |
+| `/zakovat/questions` | savollar banki (faqat Tashkiliy guruh) |
+| `/zakovat/[id]/questions` | o'yinga savollarni biriktirish, avtomatik to'ldirish |
+| `/zakovat/[id]/host` | boshlovchi pulti: savol, javob, taymer (← → Probel R) |
+| `/zakovat/[id]/sheet` | hisob hay'ati jadvali (klaviatura: strelkalar, 1/Enter, 0), tarkib, apellyatsiyalar |
+| `/chop/[id]` | qog'oz blankalar — chop etish yoki PDF |
 | `/ekran/[id]` | proyektor uchun katta ekran |
 | `/kitobxonlik` | turlar: yaratish, ovoz, o'qish, baholash, tasdiqlash |
 | `/kitobxonlik/books` | kitoblar va PDF yuklash |

@@ -40,7 +40,7 @@ def _now(now):
 
 # ------------------------------------------------------------------ ruxsatlar
 
-def is_tg(user, season) -> bool:
+def is_tg(user, season=None) -> bool:
     return has_role(user, Role.TG_MEMBER, Module.ZAKOVAT, season)
 
 
@@ -270,7 +270,7 @@ def update_game(game, actor, *, reason="", now=None, **changes) -> Game:
     if game.status in (Game.Status.FINAL, Game.Status.CANCELLED) and set(changes) != {"hide_standings"}:
         raise RuleError("Yakunlangan yoki bekor qilingan o'yinni o'zgartirib bo'lmaydi.")
     allowed = {"title", "starts_at", "venue", "max_teams", "registration_deadline", "rounds",
-               "questions_per_round", "hide_standings"}
+               "questions_per_round", "hide_standings", "timer_seconds"}
     bad = set(changes) - allowed
     if bad:
         raise RuleError(f"Bu maydonlarni o'zgartirib bo'lmaydi: {', '.join(sorted(bad))}")
@@ -376,9 +376,11 @@ def set_current_question(game, actor, number) -> Game:
         raise RuleError("O'yin ketmayapti.")
     if not 1 <= number <= game.total_questions:
         raise RuleError("Savol raqami noto'g'ri.")
+    if number != game.current_question:
+        game.timer_ends_at, game.timer_remaining = None, None  # yangi savol — taymer boshidan
     game.current_question = number
     game.current_round = game.round_of(number)
-    game.save(update_fields=["current_question", "current_round"])
+    game.save(update_fields=["current_question", "current_round", "timer_ends_at", "timer_remaining"])
     return game
 
 
@@ -755,3 +757,136 @@ def season_breakdown(season) -> dict:
         prev_places = {r.team_id: r.place for r in rows}
 
     return {"games": games, "teams": teams, "prev_places": prev_places}
+
+
+# ------------------------------------------------------------------ o'yin xodimlari, taymer, bekor qilish
+
+def is_game_staff(user, season) -> bool:
+    """O'yinni olib boruvchilar: Tashkiliy guruh, hisob hay'ati, boshlovchi, sekundant."""
+    return (is_scorer(user, season) or has_role(user, Role.HOST, Module.ZAKOVAT, season)
+            or has_role(user, Role.SECOND, Module.ZAKOVAT, season))
+
+
+@transaction.atomic
+def control_timer(game, actor, action: str, *, seconds=None, now=None) -> Game:
+    """action: start | pause | reset. seconds — savolga ajratilgan vaqtni o'zgartirish (reset bilan)."""
+    _require(is_game_staff(actor, game.season))
+    if game.status != Game.Status.IN_PROGRESS:
+        raise RuleError("O'yin ketmayapti.")
+    t = _now(now)
+    if action == "start":
+        if game.timer_ends_at and game.timer_ends_at > t:
+            return game  # allaqachon ishlayapti
+        left = game.timer_remaining if game.timer_remaining is not None else game.timer_seconds
+        game.timer_ends_at, game.timer_remaining = t + timedelta(seconds=left), None
+    elif action == "pause":
+        if game.timer_ends_at:
+            left = max(0, int((game.timer_ends_at - t).total_seconds() + 0.999))
+            game.timer_ends_at, game.timer_remaining = None, left
+    elif action == "reset":
+        if seconds is not None:
+            if not 5 <= int(seconds) <= 600:
+                raise RuleError("Vaqt 5–600 soniya oralig'ida bo'lishi kerak.")
+            game.timer_seconds = int(seconds)
+        game.timer_ends_at, game.timer_remaining = None, None
+    else:
+        raise RuleError("Noma'lum taymer amali.")
+    game.save(update_fields=["timer_seconds", "timer_ends_at", "timer_remaining"])
+    return game
+
+
+def timer_state(game, now=None) -> dict:
+    t = _now(now)
+    running = bool(game.timer_ends_at and game.timer_ends_at > t)
+    if running:
+        left = (game.timer_ends_at - t).total_seconds()
+    elif game.timer_ends_at:  # vaqt tugagan
+        left = 0
+    elif game.timer_remaining is not None:
+        left = game.timer_remaining
+    else:
+        left = game.timer_seconds
+    return {"seconds": game.timer_seconds, "running": running, "remaining": round(left, 1)}
+
+
+@transaction.atomic
+def cancel_game(game, actor, *, reason) -> Game:
+    _require(is_tg(actor, game.season))
+    if game.status not in (Game.Status.PLANNED, Game.Status.REGISTRATION):
+        raise RuleError("Faqat boshlanmagan o'yinni bekor qilish mumkin.")
+    if not reason.strip():
+        raise RuleError("Bekor qilish sababini yozing.")
+    game.status = Game.Status.CANCELLED
+    game.save(update_fields=["status"])
+    log_action(actor, "zakovat.game_cancelled", game, note=reason)
+    transaction.on_commit(lambda: game_changed.send(
+        sender=Game, game=game, changes=["cancelled"], actor=actor, late=False))
+    return game
+
+
+# ------------------------------------------------------------------ savollar banki
+
+QUESTION_FIELDS = {"text", "answer", "accepted_answers", "comment", "source", "topic", "difficulty", "status"}
+
+
+@transaction.atomic
+def save_question(actor, question=None, **fields) -> Question:
+    _require(is_tg(actor), "Savollar bankini faqat Tashkiliy guruh boshqaradi.")
+    bad = set(fields) - QUESTION_FIELDS
+    if bad:
+        raise RuleError(f"Noma'lum maydonlar: {', '.join(sorted(bad))}")
+    if fields.get("status") == Question.Status.USED:
+        raise RuleError("'Ishlatilgan' holati o'yin yakunlanganda avtomatik qo'yiladi.")
+    q = question or Question(author=actor)
+    for k, v in fields.items():
+        setattr(q, k, v)
+    if not (q.text or "").strip() or not (q.answer or "").strip():
+        raise RuleError("Savol matni va javob majburiy.")
+    if q.difficulty is not None and not 1 <= int(q.difficulty) <= 5:
+        raise RuleError("Qiyinlik 1 dan 5 gacha.")
+    q.save()
+    log_action(actor, "zakovat.question_saved", q)
+    return q
+
+
+@transaction.atomic
+def delete_question(actor, question) -> None:
+    _require(is_tg(actor), "Savollar bankini faqat Tashkiliy guruh boshqaradi.")
+    if question.status == Question.Status.USED or GameQuestion.objects.filter(question=question).exists():
+        raise RuleError("O'yinga biriktirilgan yoki ishlatilgan savolni o'chirib bo'lmaydi.")
+    log_action(actor, "zakovat.question_deleted", question, before={"text": question.text[:200]})
+    question.delete()
+
+
+@transaction.atomic
+def assign_question(game, actor, number, question=None):
+    """O'yinning N-raqamli savoliga bankdan savol biriktiradi (question=None — bo'shatadi)."""
+    _require(is_tg(actor, game.season))
+    if game.status in (Game.Status.FINAL, Game.Status.CANCELLED):
+        raise RuleError("Yakunlangan o'yin savollarini o'zgartirib bo'lmaydi.")
+    if not 1 <= number <= game.total_questions:
+        raise RuleError("Savol raqami noto'g'ri.")
+    if question is None:
+        GameQuestion.objects.filter(game=game, number=number).delete()
+        return None
+    if question.status == Question.Status.USED:
+        raise RuleError("Bu savol oldingi o'yinda ishlatilgan.")
+    other = GameQuestion.objects.filter(question=question).exclude(game=game, number=number).first()
+    if other:
+        raise RuleError(f"Bu savol allaqachon biriktirilgan: {other.game.title}, {other.number}-savol.")
+    gq, _ = GameQuestion.objects.update_or_create(game=game, number=number, defaults={"question": question})
+    return gq
+
+
+@transaction.atomic
+def autofill_questions(game, actor, question_ids) -> int:
+    """Bo'sh raqamlarga tanlangan savollarni tartib bilan joylaydi."""
+    _require(is_tg(actor, game.season))
+    taken = set(GameQuestion.objects.filter(game=game).values_list("number", flat=True))
+    free = [n for n in range(1, game.total_questions + 1) if n not in taken]
+    qs = {q.pk: q for q in Question.objects.filter(pk__in=question_ids)}
+    n = 0
+    for qid, number in zip([i for i in question_ids if i in qs], free):
+        assign_question(game, actor, number, qs[qid])
+        n += 1
+    return n
