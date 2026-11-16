@@ -139,7 +139,7 @@ Bazadagi ma'lumotlar va Volume'dagi fayllar saqlanib qoladi.
 | "Faol mavsum yo'q" | Boshqaruv → Mavsumlar → mavsumni "Joriy qilish" |
 
 ## Texnik ma'lumot (dasturchi uchun)
-- `backend/railway.json` — Railpack, pre-deploy: `migrate` + `bootstrap_admin`; start: `collectstatic` + `gunicorn` (`[::]:$PORT`), healthcheck `/api/health/`.
+- `backend/railway.json` — Railpack; start: `migrate` + `bootstrap_admin` + `collectstatic` + `gunicorn` (`[::]:$PORT`), healthcheck `/api/health/`.
 - `web/railway.json` — `npm run build` / `npm run start` (Next `PORT` ni o'zi o'qiydi), healthcheck `/login`.
 - Brauzer faqat web domeniga murojaat qiladi; `/api/*` Next tomonidan `BACKEND_URL` ga uzatiladi (CORS kerak emas).
 - `ALLOWED_HOSTS`/`CSRF_TRUSTED_ORIGINS` ga `RAILWAY_PUBLIC_DOMAIN` va `healthcheck.railway.app` avtomatik qo'shiladi.
