@@ -696,3 +696,62 @@ def season_standings(season) -> list[dict]:
     out += [{"team": t, "points": 0, "rating_j": 0, "place": None, "tie_group": None}
             for t in teams if t.is_out]
     return out
+
+
+def season_breakdown(season) -> dict:
+    """Mavsum reytingi tafsiloti: har bir liga turida qancha ball, J va o'rin; o'yindan tashqari
+    tuzatishlar (masalan, chiqib ketgan jamoaning nolga tushirilishi) va oldingi turdan keyingi o'rin.
+
+    Ballar ball reestridan olinadi (reyting bilan aynan mos), J va o'rin — o'yin natijalaridan.
+    """
+    games = list(Game.objects.filter(season=season, kind=Game.Kind.LEAGUE, status=Game.Status.FINAL)
+                 .order_by("starts_at"))
+    game_ids = {str(g.pk) for g in games}
+    results = {}
+    for r in GameResult.objects.filter(game__in=games):
+        results.setdefault(r.team_id, {})[r.game_id] = r
+
+    # reestr: jamoa → {o'yin_id: ball}, boshqa sabablar alohida
+    by_game, other = {}, {}
+    for e in PointsEntry.objects.filter(season=season, module=Module.ZAKOVAT,
+                                        subject_type=PointsEntry.Subject.TEAM):
+        if e.reason_type == POINTS_REASON and e.reason_id in game_ids:
+            d = by_game.setdefault(e.subject_id, {})
+            d[int(e.reason_id)] = d.get(int(e.reason_id), 0) + e.amount
+        else:
+            other[e.subject_id] = other.get(e.subject_id, 0) + e.amount
+
+    teams = {}
+    for team_id in set(results) | set(by_game) | set(other):
+        per = {}
+        for g in games:
+            r = results.get(team_id, {}).get(g.pk)
+            if r is None:
+                continue
+            per[g.pk] = {"points": by_game.get(team_id, {}).get(g.pk, 0), "rating_j": r.rating_j,
+                         "place": r.place, "eligible": r.eligible}
+        played = [v for v in per.values() if v["eligible"]]
+        teams[team_id] = {
+            "by_game": per,
+            "other_points": other.get(team_id, 0),
+            "played": len(played),
+            "wins": sum(1 for v in played if v["place"] == 1),
+            "best": max((v["points"] for v in played), default=0),
+        }
+
+    # oldingi o'rin: oxirgi yakunlangan turgacha bo'lgan holat
+    prev_places = {}
+    if len(games) >= 2:
+        last = games[-1].pk
+        rows = []
+        for st in season_standings(season):
+            t = st["team"]
+            if st["place"] is None:
+                continue
+            g = teams.get(t.pk, {}).get("by_game", {}).get(last)
+            rows.append(scoring.TeamScore(team_id=t.pk, points=st["points"] - (g["points"] if g else 0),
+                                          rating_j=st["rating_j"] - (g["rating_j"] if g and g["eligible"] else 0)))
+        scoring.assign_places(rows)
+        prev_places = {r.team_id: r.place for r in rows}
+
+    return {"games": games, "teams": teams, "prev_places": prev_places}

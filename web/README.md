@@ -11,6 +11,13 @@ npm.cmd run dev -- -p 3100 -H 127.0.0.1
 ```
 Backend 8100-portda ishlab turishi kerak. Sayt: http://localhost:3100
 
+**Tez rejim (production):** ishlab chiqish rejimida har sahifa birinchi ochilganda kompilyatsiya qilinadi va sekinroq.
+Haqiqiy tezlikni ko'rish uchun:
+```powershell
+node node_modules/next/dist/bin/next build
+node node_modules/next/dist/bin/next start -p 3101 -H 127.0.0.1
+```
+
 ## Sahifalar
 | Yo'l | Nima |
 |---|---|

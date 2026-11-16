@@ -3,7 +3,10 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { api, tokens } from "./api";
+import { clearApiCache } from "./cache";
 import type { Me, ZakovatMe } from "./types";
+
+const SESSION_KEY = "colba.session";
 
 type AuthState = {
   me: Me | null;
@@ -28,11 +31,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     try {
-      const m = await api<Me>("me");
+      // ikkala so'rov parallel
+      const [m, z] = await Promise.all([api<Me>("me"), api<ZakovatMe>("zakovat/me").catch(() => null)]);
       setMe(m);
-      setZakovat(await api<ZakovatMe>("zakovat/me").catch(() => null));
+      setZakovat(z);
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ me: m, zakovat: z }));
     } catch {
       tokens.clear();
+      sessionStorage.removeItem(SESSION_KEY);
       setMe(null);
       setZakovat(null);
     } finally {
@@ -41,12 +47,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const t = setTimeout(reload, 0); // birinchi yuklash (localStorage faqat brauzerda)
+    // Sahifa yangilanganda oxirgi profil darhol ko'rsatiladi, keyin serverdan tekshiriladi
+    const t = setTimeout(() => {
+      const saved = tokens.access ? sessionStorage.getItem(SESSION_KEY) : null;
+      if (saved) {
+        const { me: m, zakovat: z } = JSON.parse(saved);
+        setMe(m);
+        setZakovat(z);
+        setLoading(false);
+      }
+      reload();
+    }, 0);
     return () => clearTimeout(t);
   }, [reload]);
 
   const logout = useCallback(() => {
     tokens.clear();
+    sessionStorage.removeItem(SESSION_KEY);
+    clearApiCache();
     setMe(null);
     setZakovat(null);
   }, []);

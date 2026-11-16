@@ -550,11 +550,22 @@ class AppealDecideView(APIView):
 class StandingsView(APIView):
     def get(self, request):
         season = get_season(request)
+        bd = svc.season_breakdown(season)
+        empty = {"by_game": {}, "other_points": 0, "played": 0, "wins": 0, "best": 0}
+        rows = []
+        for r in svc.season_standings(season):
+            d = bd["teams"].get(r["team"].pk, empty)
+            rows.append({
+                "place": r["place"], "team": team_brief(r["team"]), "points": r["points"],
+                "rating_j": r["rating_j"], "tie_group": r["tie_group"],
+                "prev_place": bd["prev_places"].get(r["team"].pk),
+                "by_game": {str(k): v for k, v in d["by_game"].items()},
+                "other_points": d["other_points"], "played": d["played"], "wins": d["wins"], "best": d["best"],
+            })
         return Response({
             "season": {"id": season.pk, "name": season.name},
-            "rows": [{"place": r["place"], "team": team_brief(r["team"]), "points": r["points"],
-                      "rating_j": r["rating_j"], "tie_group": r["tie_group"]}
-                     for r in svc.season_standings(season)],
+            "games": [{"id": g.pk, "title": g.title, "starts_at": g.starts_at} for g in bd["games"]],
+            "rows": rows,
         })
 
 

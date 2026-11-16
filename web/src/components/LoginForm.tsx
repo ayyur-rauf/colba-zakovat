@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, ApiError, tokens } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { clearApiCache } from "@/lib/cache";
 import { Button, ErrorBar, Logo } from "./ui";
 
 type LoginResponse =
@@ -49,6 +50,7 @@ export default function LoginForm() {
     try {
       const r = await api<LoginResponse>("auth/email/verify", { method: "POST", body: { email, code } });
       if (r.status === "active") {
+        clearApiCache();
         tokens.set(r.access, r.refresh);
         await reload();
         router.replace(params.get("next") || "/");

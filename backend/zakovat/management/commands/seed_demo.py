@@ -178,35 +178,46 @@ class Command(BaseCommand):
         oct_game = next(g for g in games if g.starts_at.month == 10)
         nov_game = next(g for g in games if g.starts_at.month == 11)
 
-        # 1-tur (oktabr): to'liq o'tkazilgan
-        svc.open_registration(oct_game, admin)
-        for t in teams:
-            reg = svc.register_team(oct_game, t, t.captain, now=oct_game.starts_at - timedelta(days=3))
-            svc.approve_registration(reg, admin)
-        svc.start_game(oct_game, admin)
-        correct = {
+        sep_game = next(g for g in games if g.starts_at.month == 9)
+
+        def play(game, correct, appeal=None):
+            svc.open_registration(game, admin)
+            for t in correct:
+                reg = svc.register_team(game, t, t.captain, now=game.starts_at - timedelta(days=3))
+                svc.approve_registration(reg, admin)
+            svc.start_game(game, admin)
+            for t in correct:
+                players = [m.user for m in t.members.filter(status="active")]
+                for r in range(1, game.rounds + 1):
+                    svc.set_current_question(game, admin, game.first_question_of(r))
+                    for u in players[:4]:
+                        svc.add_to_lineup(game, t, r, u, admin)
+            for q in range(1, game.total_questions + 1):
+                svc.set_current_question(game, admin, q)
+                for t in correct:
+                    svc.set_mark(game, t, q, q in correct[t], admin)
+            svc.publish_preliminary(game, admin)
+            if appeal:
+                team, number = appeal
+                a = svc.submit_appeal(game, team, team.captain, number=number,
+                                      content="Javobimiz 'Amir Temur' edi, to'g'ri javob bilan bir xil ma'noda",
+                                      evidence="Savol izohida ikkala nom ham keltirilgan")
+                svc.decide_appeal(a, admin, accept=True, reason="Javob ma'nosi to'g'ri javobga mos")
+            svc.finalize_game(game, admin)
+
+        # 1-tur (sentyabr) va 2-tur (oktabr): to'liq o'tkazilgan
+        play(sep_game, {
+            teams[0]: {1, 2, 4, 6, 7, 10, 13, 14, 17, 19, 21, 24, 26, 29, 31, 34},
+            teams[1]: {1, 3, 4, 7, 9, 13, 16, 19, 22, 25, 28, 33},
+            teams[2]: {1, 2, 4, 5, 7, 8, 10, 13, 15, 19, 21, 24, 27, 30, 35},
+            teams[3]: {1, 4, 7, 13, 19, 22, 25, 31, 34, 36},
+        })
+        play(oct_game, {
             teams[0]: {1, 2, 3, 5, 7, 8, 11, 13, 14, 15, 18, 20, 22, 25, 27, 30, 33, 35},
             teams[1]: {1, 2, 4, 5, 7, 9, 12, 13, 15, 16, 19, 20, 23, 25, 28, 31, 34, 36},
             teams[2]: {1, 3, 5, 6, 8, 13, 15, 17, 20, 21, 25, 26, 29},
             teams[3]: {1, 2, 5, 13, 15, 20, 25, 32},
-        }
-        for t in teams:
-            players = [m.user for m in t.members.filter(status="active")]
-            for r in range(1, oct_game.rounds + 1):
-                svc.set_current_question(oct_game, admin, oct_game.first_question_of(r))
-                for u in players[:4]:
-                    svc.add_to_lineup(oct_game, t, r, u, admin)
-            svc.set_current_question(oct_game, admin, 1)
-        for q in range(1, oct_game.total_questions + 1):
-            svc.set_current_question(oct_game, admin, q)
-            for t in teams:
-                svc.set_mark(oct_game, t, q, q in correct[t], admin)
-        svc.publish_preliminary(oct_game, admin)
-        appeal = svc.submit_appeal(oct_game, teams[2], teams[2].captain, number=30,
-                                   content="Javobimiz 'Amir Temur' edi, to'g'ri javob bilan bir xil ma'noda",
-                                   evidence="Savol izohida ikkala nom ham keltirilgan")
-        svc.decide_appeal(appeal, admin, accept=True, reason="Javob ma'nosi to'g'ri javobga mos")
-        svc.finalize_game(oct_game, admin)
+        }, appeal=(teams[2], 30))
 
         # 2-tur (noyabr): 3 jamoa tasdiqlangan, o'yin hisob hay'ati sahifasidan boshlanadi
         svc.open_registration(nov_game, admin)

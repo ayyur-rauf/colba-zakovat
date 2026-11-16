@@ -119,9 +119,26 @@ export type Registration = {
   created_at: string;
 };
 
+export type GameCell = { points: number; rating_j: number; place: number | null; eligible: boolean };
+
+export type StandingRow = {
+  place: number | null;
+  team: TeamBrief;
+  points: number;
+  rating_j: number;
+  tie_group: number | null;
+  prev_place: number | null;
+  by_game: Record<string, GameCell>;
+  other_points: number;
+  played: number;
+  wins: number;
+  best: number;
+};
+
 export type SeasonStandings = {
   season: { id: number; name: string };
-  rows: { place: number | null; team: TeamBrief; points: number; rating_j: number; tie_group: number | null }[];
+  games: { id: number; title: string; starts_at: string }[];
+  rows: StandingRow[];
 };
 
 export const TEAM_STATUS: Record<string, string> = {

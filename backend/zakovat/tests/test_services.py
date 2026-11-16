@@ -288,3 +288,41 @@ class ResultFlowTests(Base):
         st = svc.season_standings(self.season)
         self.assertEqual([r["team"] for r in st], [a, b])
         self.assertEqual([r["place"] for r in st], [1, 2])
+
+
+class BreakdownTests(Base):
+    def test_per_game_points_prev_place_and_adjustments(self):
+        a, b, c = self.team("Alfa"), self.team("Beta"), self.team("Gamma")
+        g1 = self.game(starts=aware(2026, 10, 17, 15))
+        self.play(g1, {a: {1, 2, 3}, b: {1}, c: {1, 2}})
+        svc.finalize_game(g1, self.tg)
+        g2 = self.game(starts=aware(2026, 11, 21, 15))
+        self.play(g2, {a: set(), b: {1, 2, 3, 4}, c: {1}})
+        svc.finalize_game(g2, self.tg)
+
+        bd = svc.season_breakdown(self.season)
+        self.assertEqual([g.pk for g in bd["games"]], [g1.pk, g2.pk])
+        self.assertEqual(bd["teams"][a.pk]["by_game"][g1.pk]["points"], 3)
+        self.assertEqual(bd["teams"][b.pk]["by_game"][g2.pk]["points"], 4)
+        self.assertEqual(bd["teams"][b.pk]["wins"], 1)
+        # 1-turdan keyin: A 1-o'rin, B 3-o'rin; 2-turdan keyin B (5) birinchi
+        self.assertEqual(bd["prev_places"][a.pk], 1)
+        self.assertEqual(bd["prev_places"][b.pk], 3)
+
+        svc.take_team_out(c, c.captain, reason="Chiqdik")
+        bd = svc.season_breakdown(self.season)
+        self.assertEqual(bd["teams"][c.pk]["other_points"], -3)
+
+    def test_standings_api_shape(self):
+        from rest_framework.test import APIClient
+        a = self.team("Alfa")
+        g = self.game()
+        self.play(g, {a: {1}})
+        svc.finalize_game(g, self.tg)
+        api = APIClient()
+        api.force_authenticate(a.captain)
+        data = api.get("/api/zakovat/standings/").data
+        self.assertEqual(data["games"][0]["id"], g.pk)
+        row = data["rows"][0]
+        self.assertEqual(row["by_game"][str(g.pk)]["points"], 1)
+        self.assertEqual((row["played"], row["wins"], row["best"]), (1, 1, 1))

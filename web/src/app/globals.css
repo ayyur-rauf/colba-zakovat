@@ -1,3 +1,6 @@
+/* Qatlamlar tartibi: "colba" (bizning komponentlar) Tailwind sinflaridan past turadi,
+   shuning uchun text-right, border-gold kabi sinflar ularni ustidan yoza oladi. */
+@layer theme, base, colba, components, utilities;
 @import "tailwindcss";
 
 /* =====================================================================
@@ -56,60 +59,63 @@ body {
   background-attachment: fixed;
 }
 
-/* Kartochka — butun saytdagi asosiy blok */
-.card {
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.02), transparent), var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-}
+/* Komponent sinflari "colba" qatlamida (yuqoridagi tartibga qarang). */
+@layer colba {
+  /* Kartochka — butun saytdagi asosiy blok */
+  .card {
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.02), transparent), var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+  }
 
-/* Interaktiv kartochka (modul tanlash va h.k.) */
-.card-hover {
-  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
-}
-.card-hover:hover {
-  transform: translateY(-2px);
-  border-color: rgb(229 56 59 / 0.55);
-  box-shadow: 0 10px 40px -12px rgb(229 56 59 / 0.35);
-}
+  /* Interaktiv kartochka (modul tanlash va h.k.) */
+  .card-hover {
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-2px);
+    border-color: rgb(229 56 59 / 0.55);
+    box-shadow: 0 10px 40px -12px rgb(229 56 59 / 0.35);
+  }
 
-/* Formalar */
-.field {
-  width: 100%;
-  background: var(--bg-elev);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 0.55rem 0.75rem;
-  color: var(--fg);
-  outline: none;
-}
-.field:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
-}
-.field::placeholder {
-  color: rgb(168 148 154 / 0.6);
-}
+  /* Formalar */
+  .field {
+    width: 100%;
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 0.55rem 0.75rem;
+    color: var(--fg);
+    outline: none;
+  }
+  .field:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .field::placeholder {
+    color: rgb(168 148 154 / 0.6);
+  }
 
-/* Jadvallar */
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.875rem;
-}
-.table th {
-  text-align: left;
-  font-weight: 500;
-  color: var(--muted);
-  padding: 0.6rem 0.9rem;
-  border-bottom: 1px solid var(--line);
-}
-.table td {
-  padding: 0.6rem 0.9rem;
-  border-bottom: 1px solid rgb(58 34 40 / 0.5);
-}
-.table tr:last-child td {
-  border-bottom: none;
+  /* Jadvallar */
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+  .table th {
+    text-align: left;
+    font-weight: 500;
+    color: var(--muted);
+    padding: 0.6rem 0.9rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .table td {
+    padding: 0.6rem 0.9rem;
+    border-bottom: 1px solid rgb(58 34 40 / 0.5);
+  }
+  .table tr:last-child td {
+    border-bottom: none;
+  }
 }
 
 /* Hisobga olinmaydigan katak (3 o'yinchidan kam) */

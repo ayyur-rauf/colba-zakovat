@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "./api";
+import { apiCache } from "./cache";
 import { useAuth } from "./auth";
 import type { Me } from "./types";
 
@@ -9,16 +10,20 @@ export function errText(e: unknown) {
   return e instanceof ApiError ? e.message : "Server bilan aloqa yo'q.";
 }
 
+const cache = apiCache;
+
 /** GET so'rov: ma'lumot, xato, qayta yuklash. path=null bo'lsa so'rov yuborilmaydi. */
 export function useApi<T>(path: string | null) {
-  const [data, setData] = useState<T | null>(null);
+  const [data, setData] = useState<T | null>(() => (path && cache.has(path) ? (cache.get(path) as T) : null));
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !(path && cache.has(path)));
 
   const reload = useCallback(async () => {
     if (!path) return;
     try {
-      setData(await api<T>(path));
+      const fresh = await api<T>(path);
+      cache.set(path, fresh);
+      setData(fresh);
       setError(null);
     } catch (e) {
       setError(errText(e));
