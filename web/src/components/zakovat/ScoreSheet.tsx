@@ -247,10 +247,10 @@ export default function ScoreSheet() {
       <Card className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>
-            <tr className="text-muted">
-              <th className="sticky left-0 z-10 bg-surface px-4 py-3 text-left font-medium">Stol / Jamoa</th>
+            <tr className="bg-accent-soft text-xs font-semibold text-muted">
+              <th className="sticky left-0 z-10 bg-accent-soft-solid px-4 py-3 text-left">Jamoa / Savol</th>
               {questions.map((q) => (
-                <th key={q} className="px-1 py-3 font-medium">
+                <th key={q} className="px-1 py-2.5">
                   <button
                     disabled={!editable}
                     onClick={() => setCurrent(q)}
@@ -259,13 +259,13 @@ export default function ScoreSheet() {
                       q === sheet.current_question && editable ? "bg-accent text-white" : "hover:bg-surface-2"
                     }`}
                   >
-                    {q}
+                    S{q}
                   </button>
                 </th>
               ))}
-              <th className="px-3 py-3 font-medium">Ball</th>
-              <th className="px-3 py-3 font-medium">J</th>
-              <th className="px-3 py-3 font-medium">O&apos;rin</th>
+              <th className="px-3 py-3">Ball</th>
+              <th className="px-3 py-3">SR</th>
+              <th className="px-3 py-3">O&apos;rin</th>
             </tr>
           </thead>
           <tbody>
@@ -300,19 +300,19 @@ export default function ScoreSheet() {
                           }}
                           disabled={!editable}
                           title={isCounted ? "" : "Bu savolda 3 o'yinchidan kam — hisobga olinmaydi"}
-                          className={`h-9 w-9 rounded-lg border text-base font-semibold transition ${
+                          className={`h-8 w-8 rounded-lg text-lg font-bold leading-none transition ${
                             v === true
-                              ? "border-success/50 bg-success/15 text-success"
+                              ? "bg-accent-soft text-accent"
                               : v === false
-                                ? "border-danger/30 bg-danger/10 text-danger"
-                                : "border-line bg-bg-elev text-muted/40"
+                                ? "bg-surface-2 text-muted"
+                                : "border border-dashed border-line text-muted/40"
                           } ${isCounted ? "" : "cell-uncounted opacity-50"} ${
                             q === sheet.current_question && editable ? "ring-2 ring-accent" : ""
                           } ${cursor && editable && cursor.t === ti && cursor.q === q ? "outline outline-2 outline-offset-2 outline-gold" : ""} ${
                             editable ? "hover:scale-105" : "cursor-default"
                           }`}
                         >
-                          {v === true ? "✓" : v === false ? "✗" : "·"}
+                          {v === true ? "+" : v === false ? "−" : "·"}
                         </button>
                       </td>
                     );
@@ -329,7 +329,7 @@ export default function ScoreSheet() {
         </table>
       </Card>
       <p className="text-xs text-muted">
-        Katakni bosing: ✓ to&apos;g&apos;ri ↔ ✗ noto&apos;g&apos;ri. Klaviatura: strelkalar — katak tanlash, <b>1</b>/Enter — ✓, <b>0</b> — ✗
+        Katakni bosing: <b>+</b> to&apos;g&apos;ri ↔ <b>−</b> noto&apos;g&apos;ri. SR — savollar reytingi yig&apos;indisi (J). Klaviatura: strelkalar — katak tanlash, <b>1</b>/Enter — +, <b>0</b> — −
         (keyin avtomatik keyingi jamoaga o&apos;tadi). Chiziqli katak — o&apos;sha savolda jamoada 3 o&apos;yinchidan kam bo&apos;lgan, ball
         hisobga olinmaydi (Nizom 3.6, 4.3). Jadval har {POLL_MS / 1000} soniyada yangilanadi.
       </p>

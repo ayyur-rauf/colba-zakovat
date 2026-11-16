@@ -4,7 +4,7 @@ import { tokens } from "@/lib/api";
 import { ROUND_STATUS, type RoundStatus } from "@/lib/types";
 import { Badge } from "../ui";
 
-const TONE = { draft: "gray", voting: "red", reading: "amber", grading: "amber", done: "green" } as const;
+const TONE = { draft: "gray", voting: "accent", reading: "amber", grading: "amber", done: "green" } as const;
 
 export function RoundStatusBadge({ status }: { status: RoundStatus }) {
   return <Badge tone={TONE[status]}>{ROUND_STATUS[status]}</Badge>;

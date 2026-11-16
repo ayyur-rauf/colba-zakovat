@@ -65,12 +65,14 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="card w-full max-w-sm p-8 shadow-[0_30px_80px_-30px_rgb(229_56_59_/_0.45)]">
+    <div className="card w-full max-w-md p-8">
       <div className="mb-6 text-center">
         <div className="mx-auto mb-4 w-fit">
           <Logo size={52} />
         </div>
-        <h1 className="glow-text text-2xl font-semibold">Colba platformasi</h1>
+        <h1 className="text-2xl font-bold tracking-tight">
+          COLBA <span className="text-accent">PLATFORMA</span>
+        </h1>
         <p className="mt-1 text-sm text-muted">Xodimlar uchun intellektual tadbirlar</p>
       </div>
 

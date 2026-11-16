@@ -8,7 +8,7 @@ import { useAction, useApi, usePerms } from "@/lib/hooks";
 import { QUESTION_STATUS, type Question, type QuestionBank as Bank, type QuestionStatus } from "@/lib/types";
 import { Badge, Button, Card, CardHeader, Empty, Field, Notice, PageTitle } from "../ui";
 
-const STATUS_TONE = { draft: "gray", editing: "amber", approved: "green", used: "red" } as const;
+const STATUS_TONE = { draft: "gray", editing: "amber", approved: "green", used: "gray" } as const;
 
 export default function QuestionBank() {
   const { zakovatTg } = usePerms();

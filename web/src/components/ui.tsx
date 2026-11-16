@@ -1,21 +1,23 @@
 "use client";
 
-// Umumiy UI komponentlari. Ranglar globals.css dagi o'zgaruvchilardan olinadi.
+// Umumiy UI komponentlari. Ranglar globals.css dagi o'zgaruvchilardan olinadi
+// (kunduzgi va tungi mavzu avtomatik almashadi).
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { usePerms } from "@/lib/hooks";
 import { ADMIN_MODULE, MODULES } from "@/lib/modules";
+import { useTheme } from "@/lib/theme";
 
 type Variant = "primary" | "ghost" | "danger" | "success" | "soft";
 
 const BTN: Record<Variant, string> = {
-  primary: "bg-accent text-white hover:bg-accent-strong shadow-[0_8px_24px_-10px_var(--accent)]",
-  ghost: "border border-line bg-transparent text-fg hover:bg-surface-2",
-  soft: "bg-accent-soft text-accent hover:bg-accent/25",
-  danger: "bg-danger/90 text-white hover:bg-danger",
-  success: "bg-success/90 text-white hover:bg-success",
+  primary: "rounded-[10px] bg-accent text-white hover:bg-accent-strong",
+  ghost: "rounded-full border border-line bg-surface text-fg hover:bg-surface-2",
+  soft: "rounded-[10px] bg-accent-soft text-accent hover:brightness-95",
+  danger: "rounded-[10px] bg-danger/10 text-danger hover:bg-danger/20",
+  success: "rounded-[10px] bg-success text-white hover:bg-accent-strong",
 };
 
 export function Button({
@@ -25,7 +27,7 @@ export function Button({
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant }) {
   return (
     <button
-      className={`inline-flex items-center justify-center gap-1.5 rounded-[10px] px-3.5 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${BTN[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${BTN[variant]} ${className}`}
       {...props}
     />
   );
@@ -41,7 +43,7 @@ export function LinkButton({
   return (
     <Link
       href={href}
-      className={`inline-flex items-center justify-center gap-1.5 rounded-[10px] px-3.5 py-2 text-sm font-medium transition ${BTN[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-semibold transition ${BTN[variant]} ${className}`}
       {...rest}
     >
       {children}
@@ -49,18 +51,19 @@ export function LinkButton({
   );
 }
 
-type Tone = "gray" | "red" | "green" | "amber" | "gold";
+type Tone = "gray" | "accent" | "red" | "green" | "amber" | "gold";
 const TONE: Record<Tone, string> = {
   gray: "bg-surface-2 text-muted",
-  red: "bg-accent-soft text-accent",
-  green: "bg-success/15 text-success",
-  amber: "bg-warning/15 text-warning",
-  gold: "bg-gold/15 text-gold",
+  accent: "bg-accent-soft text-accent",
+  red: "bg-danger/10 text-danger",
+  green: "bg-accent-soft text-success",
+  amber: "bg-warning/12 text-warning",
+  gold: "bg-gold/12 text-gold",
 };
 
 export function Badge({ children, tone = "gray" }: { children: React.ReactNode; tone?: Tone }) {
   return (
-    <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ${TONE[tone]}`}>
+    <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${TONE[tone]}`}>
       {children}
     </span>
   );
@@ -72,10 +75,10 @@ export function Card({ children, className = "" }: { children: React.ReactNode; 
 
 export function CardHeader({ title, subtitle, actions }: { title: React.ReactNode; subtitle?: React.ReactNode; actions?: React.ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
+    <div className="flex flex-wrap items-center justify-between gap-3 px-6 pb-2 pt-5">
       <div>
-        <h2 className="font-semibold">{title}</h2>
-        {subtitle && <div className="mt-0.5 text-sm text-muted">{subtitle}</div>}
+        <h2 className="text-lg font-bold tracking-tight">{title}</h2>
+        {subtitle && <div className="mt-0.5 text-xs text-muted">{subtitle}</div>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
@@ -86,8 +89,8 @@ export function PageTitle({ title, subtitle, actions }: { title: React.ReactNode
   return (
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        {subtitle && <div className="mt-1 text-muted">{subtitle}</div>}
+        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+        {subtitle && <div className="mt-1 text-sm text-muted">{subtitle}</div>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
@@ -100,7 +103,7 @@ export function Notice({ error, notice, onClose }: { error?: string | null; noti
   return (
     <div
       className={`flex items-start justify-between gap-3 rounded-xl border px-4 py-3 text-sm ${
-        isErr ? "border-danger/40 bg-danger/10 text-danger" : "border-success/40 bg-success/10 text-success"
+        isErr ? "border-danger/30 bg-danger/8 text-danger" : "border-accent/25 bg-accent-soft text-accent"
       }`}
     >
       <span>{error ?? notice}</span>
@@ -123,7 +126,7 @@ export function Empty({ children }: { children: React.ReactNode }) {
 export function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <label className="block text-sm">
-      <span className="mb-1.5 block font-medium text-fg/90">{label}</span>
+      <span className="mb-1.5 block text-xs font-semibold text-fg/80">{label}</span>
       {children}
       {hint && <span className="mt-1 block text-xs text-muted">{hint}</span>}
     </label>
@@ -132,68 +135,131 @@ export function Field({ label, hint, children }: { label: string; hint?: string;
 
 export function Stat({ label, value, hint }: { label: string; value: React.ReactNode; hint?: string }) {
   return (
-    <div className="card px-5 py-4">
-      <div className="text-xs uppercase tracking-wider text-muted">{label}</div>
-      <div className="mt-1 text-2xl font-semibold">{value}</div>
+    <div className="card px-5 py-5">
+      <div className="text-xs font-medium text-muted">{label}</div>
+      <div className="mt-2 text-2xl font-bold tracking-tight">{value}</div>
       {hint && <div className="mt-0.5 text-xs text-muted">{hint}</div>}
     </div>
   );
 }
 
+/** Qalqon shaklidagi logotip (rasmdagi kabi). Rangi mavzuga qarab o'zgaradi. */
 export function Logo({ size = 36 }: { size?: number }) {
   return (
-    <span
-      className="grid place-items-center rounded-xl bg-gradient-to-br from-accent to-accent-strong font-bold text-white shadow-[0_6px_24px_-6px_var(--accent)]"
-      style={{ width: size, height: size, fontSize: size * 0.5 }}
-    >
-      C
-    </span>
+    <svg width={size} height={size} viewBox="0 0 40 40" aria-hidden="true" className="shrink-0 text-accent">
+      <path
+        d="M20 3 6 8v10c0 9 6.2 16.3 14 19 7.8-2.7 14-10 14-19V8L20 3Z"
+        fill="currentColor"
+        fillOpacity="0.12"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <path d="M24.5 15.5a6 6 0 1 0 0 9" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
+    </svg>
   );
+}
+
+export function Brand({ sub = "INTELLEKTUAL PLATFORMA" }: { sub?: string }) {
+  return (
+    <Link href="/" className="flex items-center gap-3">
+      <Logo size={38} />
+      <span className="leading-tight">
+        <span className="block text-[17px] font-extrabold tracking-wide">
+          COLBA <span className="text-accent">PLATFORMA</span>
+        </span>
+        <span className="block text-[10px] font-semibold tracking-[0.2em] text-muted">{sub}</span>
+      </span>
+    </Link>
+  );
+}
+
+export function ThemeToggle() {
+  const { theme, toggle } = useTheme();
+  const dark = theme === "dark";
+  return (
+    <button
+      onClick={toggle}
+      title={dark ? "Kunduzgi ko'rinish" : "Tungi ko'rinish"}
+      aria-label={dark ? "Kunduzgi ko'rinish" : "Tungi ko'rinish"}
+      className="grid h-9 w-9 place-items-center rounded-full border border-line bg-surface text-muted transition hover:text-fg"
+    >
+      {dark ? (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+        </svg>
+      ) : (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
+function roleLabel(perms: ReturnType<typeof usePerms>) {
+  if (perms.admin) return "Administrator";
+  if (perms.zakovatTg) return "Tashkiliy guruh";
+  if (perms.kitobOrganizer) return "Tashkilotchi";
+  if (perms.zakovatScorer) return "Hisob hay'ati";
+  if (perms.kitobReviewer) return "Tekshiruvchi";
+  return null;
 }
 
 export function Header() {
   const { me, logout } = useAuth();
   const pathname = usePathname();
-  const { admin } = usePerms();
-  const nav = admin ? [...MODULES, ADMIN_MODULE] : MODULES;
+  const perms = usePerms();
+  const role = roleLabel(perms);
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-bg-elev/85 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center gap-6 px-4 py-3">
-        <Link href="/" className="flex items-center gap-2.5 font-semibold">
-          <Logo size={32} />
-          <span className="hidden sm:inline">Colba</span>
-        </Link>
-        <nav className="flex flex-1 items-center gap-1 overflow-x-auto">
-          {nav.map((m) => {
+    <header className="sticky top-0 z-30 border-b border-line bg-bg-elev/90 backdrop-blur">
+      <div className="mx-auto flex h-[68px] max-w-7xl items-center gap-6 px-4">
+        <Brand />
+        <nav className="flex flex-1 items-center justify-center gap-1 overflow-x-auto">
+          {MODULES.map((m) => {
             const active = pathname.startsWith(m.href);
             return (
               <Link
                 key={m.key}
                 href={m.href}
-                className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm transition ${
-                  active ? "bg-accent-soft text-accent" : "text-muted hover:bg-surface-2 hover:text-fg"
+                className={`whitespace-nowrap rounded-xl px-3.5 py-2 text-sm font-semibold transition ${
+                  active ? "bg-accent-soft text-accent" : "text-muted hover:text-fg"
                 }`}
               >
-                <span>{m.icon}</span>
                 {m.title}
               </Link>
             );
           })}
         </nav>
-        {me && (
-          <div className="flex items-center gap-3 text-sm">
-            <span className="hidden text-right leading-tight md:block">
-              <span className="block">{me.employee?.full_name ?? me.name}</span>
-              {me.employee && <span className="block text-xs text-muted">{me.employee.branch}</span>}
-            </span>
-            <Button variant="ghost" onClick={logout}>
+        <div className="flex items-center gap-2 text-sm">
+          {role && (
+            <span className="hidden rounded-lg border border-line px-2 py-1 text-[11px] font-semibold text-muted lg:inline">{role}</span>
+          )}
+          {perms.admin && (
+            <Link
+              href={ADMIN_MODULE.href}
+              className={`hidden items-center gap-1.5 rounded-full border px-3.5 py-2 font-semibold transition sm:inline-flex ${
+                pathname.startsWith(ADMIN_MODULE.href) ? "border-accent/40 bg-accent-soft text-accent" : "border-line bg-surface hover:bg-surface-2"
+              }`}
+            >
+              ⚙ Boshqaruv
+            </Link>
+          )}
+          <ThemeToggle />
+          {me && (
+            <Button variant="ghost" onClick={logout} title={me.employee?.full_name ?? me.name}>
               Chiqish
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </header>
   );
+}
+
+export function Footer() {
+  return <footer className="py-8 text-center text-xs text-muted">COLBA · Intellektual tadbirlar boshqaruv tizimi</footer>;
 }
 
 export function formatDate(iso: string | null | undefined) {

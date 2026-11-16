@@ -42,7 +42,7 @@ export default function KitobBooks() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {(books.data ?? []).map((b) => (
           <Card key={b.id} className="overflow-hidden">
-            <div className="grid aspect-[3/4] place-items-center bg-gradient-to-br from-accent-strong/40 via-surface-2 to-bg-elev">
+            <div className="grid aspect-[3/4] place-items-center bg-accent-soft">
               {b.cover ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={b.cover} alt={b.title} className="h-full w-full object-cover" />

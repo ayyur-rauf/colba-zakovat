@@ -4,27 +4,55 @@
 @import "tailwindcss";
 
 /* =====================================================================
-   COLBA DIZAYN TIZIMI — qizg'ish-qora mavzu
+   COLBA DIZAYN TIZIMI — yashil, minimal; kunduzgi va tungi ko'rinish
    Ranglarni shu yerdan o'zgartiring: butun sayt shu o'zgaruvchilardan oladi.
+   Kunduzgi — :root, tungi — [data-theme="dark"].
    Tailwind sinflari: bg-bg, bg-surface, bg-surface-2, border-line, text-fg,
    text-muted, bg-accent, text-accent, bg-accent-soft, text-success ...
    ===================================================================== */
 :root {
-  --bg: #0b0708;            /* sahifa foni */
-  --bg-elev: #120b0d;       /* sarlavha, panel foni */
-  --surface: #1a1013;       /* kartochka */
-  --surface-2: #23161a;     /* ichki blok, hover */
-  --line: #3a2228;          /* chegaralar */
-  --fg: #f4eaec;            /* asosiy matn */
-  --muted: #a8949a;         /* ikkinchi darajali matn */
-  --accent: #e5383b;        /* asosiy qizil */
-  --accent-strong: #b5161b; /* bosilgan/qorong'i qizil */
-  --accent-soft: rgb(229 56 59 / 0.14);
-  --gold: #f2b84b;          /* 1-o'rin, ta'kid */
-  --success: #2fbf71;
-  --warning: #f2a33a;
-  --danger: #ff5a5f;
-  --radius: 14px;
+  --bg: #f3f6f4;            /* sahifa foni */
+  --bg-elev: #ffffff;       /* sarlavha, kiritish maydonlari */
+  --surface: #ffffff;       /* kartochka */
+  --surface-2: #f1f5f2;     /* ichki blok, hover */
+  --line: #e2e8e4;          /* chegaralar */
+  --fg: #16261d;            /* asosiy matn */
+  --muted: #6b7c72;         /* ikkinchi darajali matn */
+  --accent: #1b8150;        /* asosiy yashil */
+  --accent-strong: #136b40; /* bosilgan/qorong'i yashil */
+  --accent-soft: #e6f3eb;   /* och yashil fon (faol menyu, jadval sarlavhasi) */
+  --accent-soft-solid: #e6f3eb; /* shaffof bo'lmagan varianti (qotirilgan kataklar uchun) */
+  --gold: #c58a12;          /* 1-o'rin, ta'kid */
+  --success: #1b8150;
+  --warning: #b7791f;
+  --danger: #c2413b;
+  --radius: 16px;
+  --shadow: 0 1px 2px rgb(16 32 24 / 0.04), 0 10px 30px -18px rgb(16 32 24 / 0.18);
+  --hero-from: #0f5c36;     /* bosh sahifa banneri */
+  --hero-to: #2fae6d;
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg: #0d1411;
+  --bg-elev: #121b16;
+  --surface: #141e19;
+  --surface-2: #1b2721;
+  --line: #26342c;
+  --fg: #e6efe9;
+  --muted: #8fa398;
+  --accent: #35b374;
+  --accent-strong: #2a9a61;
+  --accent-soft: rgb(53 179 116 / 0.14);
+  --accent-soft-solid: #18301f;
+  --gold: #e3b341;
+  --success: #35b374;
+  --warning: #e0a43b;
+  --danger: #ef6b64;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 32px -18px rgb(0 0 0 / 0.6);
+  --hero-from: #0c3d25;
+  --hero-to: #1f7a4b;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -38,44 +66,38 @@
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
   --color-accent-soft: var(--accent-soft);
+  --color-accent-soft-solid: var(--accent-soft-solid);
   --color-gold: var(--gold);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
-  --font-sans: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
-}
-
-html {
-  color-scheme: dark;
+  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
 }
 
 body {
   color: var(--fg);
+  background: var(--bg);
   font-family: var(--font-sans);
-  background:
-    radial-gradient(900px 500px at 8% -10%, rgb(229 56 59 / 0.18), transparent 60%),
-    radial-gradient(700px 500px at 100% 0%, rgb(140 20 40 / 0.16), transparent 60%),
-    var(--bg);
-  background-attachment: fixed;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* Komponent sinflari "colba" qatlamida (yuqoridagi tartibga qarang). */
 @layer colba {
   /* Kartochka — butun saytdagi asosiy blok */
   .card {
-    background: linear-gradient(180deg, rgb(255 255 255 / 0.02), transparent), var(--surface);
+    background: var(--surface);
     border: 1px solid var(--line);
     border-radius: var(--radius);
+    box-shadow: var(--shadow);
   }
 
-  /* Interaktiv kartochka (modul tanlash va h.k.) */
+  /* Interaktiv kartochka */
   .card-hover {
     transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   }
   .card-hover:hover {
     transform: translateY(-2px);
-    border-color: rgb(229 56 59 / 0.55);
-    box-shadow: 0 10px 40px -12px rgb(229 56 59 / 0.35);
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
   }
 
   /* Formalar */
@@ -84,19 +106,20 @@ body {
     background: var(--bg-elev);
     border: 1px solid var(--line);
     border-radius: 10px;
-    padding: 0.55rem 0.75rem;
+    padding: 0.55rem 0.8rem;
     color: var(--fg);
     outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
   .field:focus {
     border-color: var(--accent);
     box-shadow: 0 0 0 3px var(--accent-soft);
   }
   .field::placeholder {
-    color: rgb(168 148 154 / 0.6);
+    color: color-mix(in srgb, var(--muted) 70%, transparent);
   }
 
-  /* Jadvallar */
+  /* Jadvallar: och yashil sarlavha, katta harflar */
   .table {
     width: 100%;
     border-collapse: collapse;
@@ -104,26 +127,45 @@ body {
   }
   .table th {
     text-align: left;
-    font-weight: 500;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     color: var(--muted);
-    padding: 0.6rem 0.9rem;
-    border-bottom: 1px solid var(--line);
+    background: var(--accent-soft);
+    padding: 0.75rem 1rem;
   }
   .table td {
-    padding: 0.6rem 0.9rem;
-    border-bottom: 1px solid rgb(58 34 40 / 0.5);
+    padding: 0.8rem 1rem;
+    border-top: 1px solid var(--line);
   }
-  .table tr:last-child td {
-    border-bottom: none;
+
+  /* Bosh sahifa banneri */
+  .hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: 22px;
+    color: #fff;
+    background: linear-gradient(120deg, var(--hero-from), var(--hero-to));
+  }
+  .hero::after {
+    content: "";
+    position: absolute;
+    right: -8%;
+    top: -40%;
+    width: 45%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 48px solid rgb(255 255 255 / 0.08);
   }
 }
 
 /* Hisobga olinmaydigan katak (3 o'yinchidan kam) */
 .cell-uncounted {
-  background-image: repeating-linear-gradient(45deg, transparent 0 4px, rgb(255 255 255 / 0.06) 4px 8px);
+  background-image: repeating-linear-gradient(45deg, transparent 0 4px, color-mix(in srgb, var(--muted) 18%, transparent) 4px 8px);
 }
 
-/* Qizil nur bilan sarlavha matni */
+/* Katta raqamlar uchun (avval nurli edi — minimal dizaynda oddiy) */
 .glow-text {
-  text-shadow: 0 0 28px rgb(229 56 59 / 0.45);
+  letter-spacing: -0.02em;
 }

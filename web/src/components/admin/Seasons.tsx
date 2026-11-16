@@ -24,7 +24,7 @@ export default function AdminSeasons() {
           <Card key={s.id} className={`p-5 ${s.is_active ? "border-accent/60" : ""}`}>
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">{s.name}</h3>
-              {s.is_active ? <Badge tone="red">Joriy</Badge> : <Badge>Arxiv / kelgusi</Badge>}
+              {s.is_active ? <Badge tone="accent">Joriy</Badge> : <Badge>Arxiv / kelgusi</Badge>}
             </div>
             <p className="mt-1 text-sm text-muted">
               {s.start_date.split("-").reverse().join(".")} — {s.end_date.split("-").reverse().join(".")}

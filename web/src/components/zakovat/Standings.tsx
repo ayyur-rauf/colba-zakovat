@@ -66,7 +66,7 @@ export default function ZakovatStandings() {
             const r = ranked[i];
             const h = ["md:pb-10", "md:pb-4", "md:pb-0"][i];
             return (
-              <Card key={r.team.id} className={`p-5 text-center ${i === 0 ? "border-gold/60 shadow-[0_10px_50px_-20px_var(--gold)]" : ""}`}>
+              <Card key={r.team.id} className={`p-5 text-center ${i === 0 ? "border-gold/60 ring-1 ring-gold/30" : ""}`}>
                 <div className={h}>
                   <div className="text-3xl">{["🥇", "🥈", "🥉"][i]}</div>
                   <div className="mt-2 text-xl font-semibold">{r.team.name}</div>
@@ -122,7 +122,7 @@ export default function ZakovatStandings() {
                   <td>
                     <div className="font-medium">{r.team.name}</div>
                     <div className="mt-1.5 h-1.5 max-w-56 rounded-full bg-surface-2">
-                      <div className="h-1.5 rounded-full bg-gradient-to-r from-accent-strong to-accent" style={{ width: `${(r.points / max) * 100}%` }} />
+                      <div className="h-1.5 rounded-full bg-accent" style={{ width: `${(r.points / max) * 100}%` }} />
                     </div>
                   </td>
                   {games.map((g) => (

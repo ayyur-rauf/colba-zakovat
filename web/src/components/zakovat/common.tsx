@@ -5,7 +5,7 @@ import { Badge } from "../ui";
 
 const GAME_TONE = {
   planned: "gray",
-  registration: "red",
+  registration: "accent",
   in_progress: "amber",
   preliminary: "amber",
   final: "green",

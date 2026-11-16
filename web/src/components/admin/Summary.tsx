@@ -121,7 +121,7 @@ export default function AdminSummary() {
                     <td>
                       <div className="flex items-center gap-2">
                         <div className="h-2 flex-1 rounded-full bg-surface-2">
-                          <div className="h-2 rounded-full bg-gradient-to-r from-accent-strong to-accent" style={{ width: `${b.participation}%` }} />
+                          <div className="h-2 rounded-full bg-accent" style={{ width: `${b.participation}%` }} />
                         </div>
                         <span className="w-10 text-right text-sm">{b.participation}%</span>
                       </div>

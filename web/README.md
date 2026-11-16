@@ -48,7 +48,8 @@ node node_modules/next/dist/bin/next start -p 3101 -H 127.0.0.1
 | `/boshqaruv/audit` | harakatlar jurnali |
 
 ## Tashqi ko'rinishni o'zgartirish
-- **Ranglar, burchaklar, fon:** `src/app/globals.css` — boshidagi o'zgaruvchilar (`--bg`, `--accent`, ...).
+- **Ranglar, burchaklar, fon:** `src/app/globals.css` — kunduzgi (`:root`) va tungi (`[data-theme="dark"]`) o'zgaruvchilar (`--bg`, `--accent`, ...).
+- **Kunduzgi/tungi ko'rinish:** sarlavhadagi ☾/☀ tugmasi; tanlov brauzerda saqlanadi, birinchi marta tizim sozlamasiga qaraladi (`src/lib/theme.ts`).
 - **Modullar, ikonkalar, bo'limlar menyusi:** `src/lib/modules.ts`.
 - **Tugma, kartochka, belgi, sarlavha:** `src/components/ui.tsx`.
 - Har modul sahifalari: `src/components/zakovat/*`, `src/components/kitob/*`.
