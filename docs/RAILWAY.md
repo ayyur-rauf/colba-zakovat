@@ -87,6 +87,19 @@ Tekshirish: brauzerda `https://<backend-domeni>/api/health/` → `{"status":"ok"
    Oxirida `/` qo'ymang. Bu qiymat **build vaqtida** o'qiladi — keyin o'zgartirsangiz, web xizmatini
    **Redeploy** qiling.
 
+## Sinov rejimi (pochtasiz tekshirish)
+Pochta hali sozlanmagan bo'lsa, backend Variables'ga qo'shing:
+```
+TEST_MODE=1
+DEMO_DATA=1
+```
+- `TEST_MODE=1` — kirish kodi xatga yuborilmaydi, kirish sahifasida ko'rinadi.
+- `DEMO_DATA=1` — birinchi deploy'da demo ma'lumotlar yuklanadi (bir marta): demo jamoalar, o'yinlar, kitoblar.
+  Kirish: `admin@demo.colba.uz` (bosh admin), `tg@demo.colba.uz` (tashkilotchi), `xodim1@demo.colba.uz` (xodim).
+
+> **Diqqat:** sinov rejimida ro'yxatdagi emailni bilgan har kim kira oladi. Haqiqiy xodimlar ro'yxatini
+> yuklashdan oldin `TEST_MODE` va `DEMO_DATA` ni o'chiring va pochtani (5-qadam) sozlang.
+
 ## 5. Pochta (Brevo) — kirish kodlari uchun
 Saytga kirish email kodi orqali. Railway'ning arzon tariflarida oddiy SMTP portlari yopiq bo'lishi mumkin,
 shuning uchun xat Brevo'ning HTTP API'si orqali yuboriladi (kod tayyor).

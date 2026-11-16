@@ -51,3 +51,29 @@ class MailFailureTests(TestCase):
         r = APIClient().post("/api/auth/email/request-code/", {"email": "x@colba.uz"}, format="json")
         self.assertEqual(r.status_code, 400)
         self.assertIn("pochta", r.data["detail"])
+
+
+@override_settings(DEBUG=False, TEST_MODE=True, EMAIL_BACKEND="django.core.mail.backends.console.EmailBackend")
+class TestModeTests(TestCase):
+    def test_code_shown_in_test_mode(self):
+        Employee.objects.create(full_name="X", branch=Branch.objects.create(name="F"), email="x@colba.uz")
+        with mock.patch("sys.stdout"):
+            r = APIClient().post("/api/auth/email/request-code/", {"email": "x@colba.uz"}, format="json")
+        self.assertRegex(r.data["dev_code"], r"^\d{6}$")
+
+    @override_settings(TEST_MODE=False)
+    def test_code_hidden_on_real_server(self):
+        Employee.objects.create(full_name="X", branch=Branch.objects.create(name="F"), email="x@colba.uz")
+        with mock.patch("sys.stdout"):
+            r = APIClient().post("/api/auth/email/request-code/", {"email": "x@colba.uz"}, format="json")
+        self.assertNotIn("dev_code", r.data)
+
+    @mock.patch.dict("os.environ", {"DEMO_DATA": "1", "ADMIN_EMAIL": "boss@colba.uz"})
+    def test_demo_data_loaded_once(self):
+        from zakovat.management.commands.seed_demo import DEMO_SEASON
+        call_command("bootstrap_admin", stdout=mock.MagicMock())
+        n = Employee.objects.count()
+        call_command("bootstrap_admin", stdout=mock.MagicMock())  # takror — demo qayta yuklanmaydi
+        self.assertTrue(Season.objects.filter(name=DEMO_SEASON, is_active=True).exists())
+        self.assertEqual(Employee.objects.count(), n)
+        self.assertTrue(Employee.objects.filter(email="boss@colba.uz").exists())

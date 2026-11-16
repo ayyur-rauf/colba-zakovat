@@ -135,8 +135,10 @@ def request_email_code(email: str, *, allow_unknown=False) -> str | None:
 
 
 def dev_codes_visible() -> bool:
-    """Pochta sozlanmagan mahalliy rejimda kod javobda qaytariladi (serverda hech qachon)."""
-    return settings.DEBUG and settings.EMAIL_BACKEND.endswith("console.EmailBackend")
+    """Pochta sozlanmagan mahalliy yoki sinov rejimida kod javobda qaytariladi.
+    Haqiqiy serverda (DEBUG=0, TEST_MODE=0) hech qachon."""
+    return (settings.DEBUG or getattr(settings, "TEST_MODE", False)) and \
+        settings.EMAIL_BACKEND.endswith("console.EmailBackend")
 
 
 def check_email_code(email: str, code: str) -> str:

@@ -109,8 +109,8 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **opts):
-        if not settings.DEBUG:
-            raise CommandError("Faqat DEBUG=1 bo'lganda ishlaydi.")
+        if not (settings.DEBUG or getattr(settings, "TEST_MODE", False)):
+            raise CommandError("Faqat DEBUG=1 yoki TEST_MODE=1 bo'lganda ishlaydi.")
         tz = timezone.get_current_timezone()
 
         def at(*a):
@@ -147,9 +147,12 @@ class Command(BaseCommand):
         admin.status = User.Status.ACTIVE
         admin.display_name = "Bosh admin"
         admin.save()
-        (settings.BASE_DIR / "dev_login.txt").write_text(
-            f"Mahalliy admin panel: http://127.0.0.1:8100/admin/\nlogin: admin\nparol: {password}\n",
-            encoding="utf-8")
+        # Login fayli faqat mahalliy kompyuterda (DEBUG) yoziladi — serverda (TEST_MODE) emas
+        local = settings.DEBUG
+        if local:
+            (settings.BASE_DIR / "dev_login.txt").write_text(
+                f"Mahalliy admin panel: http://127.0.0.1:8100/admin/\nlogin: admin\nparol: {password}\n",
+                encoding="utf-8")
 
         branches = [Branch.objects.get_or_create(name=n)[0] for n in ("Chilonzor", "Yunusobod", "Sergeli")]
         users = []
@@ -283,15 +286,17 @@ class Command(BaseCommand):
                                     module="kitobxonlik", author=staff,
                                     body="Ovoz berish 4 kundan keyin yopiladi.")
 
-        with open(settings.BASE_DIR / "dev_login.txt", "a", encoding="utf-8") as f:
-            f.write("\nSayt (http://localhost:3100) — email kod bilan kirish:\n"
-                    "  tashkilotchi / hisob hay'ati: tg@demo.colba.uz\n"
-                    "  bosh admin (Boshqaruv bo'limi): admin@demo.colba.uz\n"
-                    "  oddiy xodim (Bilimdonlar sardori): xodim1@demo.colba.uz\n"
-                    "  Mahalliy rejimda kod sahifada avtomatik ko'rinadi.\n")
+        if local:
+            with open(settings.BASE_DIR / "dev_login.txt", "a", encoding="utf-8") as f:
+                f.write("\nSayt (http://localhost:3100) — email kod bilan kirish:\n"
+                        "  tashkilotchi / hisob hay'ati: tg@demo.colba.uz\n"
+                        "  bosh admin (Boshqaruv bo'limi): admin@demo.colba.uz\n"
+                        "  oddiy xodim (Bilimdonlar sardori): xodim1@demo.colba.uz\n"
+                        "  Mahalliy rejimda kod sahifada avtomatik ko'rinadi.\n")
 
         self._seed_kitobxonlik(season, admin, users, at)
 
+        where = (f"Admin login/parol: {settings.BASE_DIR / 'dev_login.txt'}" if local
+                 else "Kirish: admin@demo.colba.uz, tg@demo.colba.uz, xodim1@demo.colba.uz (kod sahifada)")
         self.stdout.write(self.style.SUCCESS(
-            f"Demo tayyor: {len(users)} xodim, {len(teams)} jamoa, {len(games)} o'yin. "
-            f"Admin login/parol: {settings.BASE_DIR / 'dev_login.txt'}"))
+            f"Demo tayyor: {len(users)} xodim, {len(teams)} jamoa, {len(games)} o'yin. {where}"))

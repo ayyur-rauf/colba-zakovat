@@ -8,6 +8,7 @@ O'zgaruvchilar:
     ADMIN_NAME      — F.I.Sh. (standart: "Bosh admin")
     ADMIN_BRANCH    — filial nomi (standart: "Bosh ofis")
     ADMIN_PASSWORD  — ixtiyoriy: /admin/ (Django admin panel) uchun parol; login = "admin"
+    DEMO_DATA=1     — (faqat TEST_MODE=1 bilan) demo ma'lumotlar bir marta yuklanadi
 """
 import os
 from datetime import date
@@ -23,8 +24,27 @@ from core.models import Role, RoleAssignment, Season
 class Command(BaseCommand):
     help = "Bosh admin va joriy mavsumni yaratadi (takror ishga tushirish xavfsiz)."
 
-    @transaction.atomic
     def handle(self, *args, **opts):
+        self._demo()
+        self._admin()
+
+    def _demo(self):
+        from django.conf import settings
+        from django.core.management import call_command
+
+        from zakovat.management.commands.seed_demo import DEMO_SEASON
+        if os.getenv("DEMO_DATA") != "1":
+            return
+        if not getattr(settings, "TEST_MODE", False):
+            self.stdout.write("DEMO_DATA faqat TEST_MODE=1 bilan ishlaydi — o'tkazib yuborildi.")
+            return
+        if Season.objects.filter(name=DEMO_SEASON).exists():
+            self.stdout.write("Demo ma'lumotlar allaqachon bor.")
+            return
+        call_command("seed_demo", stdout=self.stdout)
+
+    @transaction.atomic
+    def _admin(self):
         self._season()
         email = os.getenv("ADMIN_EMAIL", "").strip().lower()
         if not email:

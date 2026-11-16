@@ -164,10 +164,16 @@ EMAIL_CODE_MAX_PER_HOUR = 5
 # Pochta: BREVO_API_KEY berilsa — Brevo HTTP API (Railway'da SMTP portlari yopiq bo'lishi mumkin);
 # aks holda SMTP (EMAIL_HOST...) yoki mahalliy rejimda konsol.
 BREVO_API_KEY = os.getenv("BREVO_API_KEY", "").strip()
+
+# SINOV REJIMI (faqat serverda sinab ko'rish uchun!): pochta sozlanmagan bo'lsa kirish kodi
+# xatga yuborilmaydi, kirish sahifasida ko'rinadi. Ro'yxatdagi emailni bilgan har kim kira oladi —
+# haqiqiy xodimlar bilan ishlashdan oldin TEST_MODE ni o'chiring va pochtani sozlang.
+TEST_MODE = env_bool("TEST_MODE", False)
+
 EMAIL_BACKEND = os.getenv(
     "EMAIL_BACKEND",
     "core.email_backends.BrevoEmailBackend" if BREVO_API_KEY
-    else "django.core.mail.backends.console.EmailBackend" if DEBUG
+    else "django.core.mail.backends.console.EmailBackend" if (DEBUG or TEST_MODE)
     else "django.core.mail.backends.smtp.EmailBackend",
 )
 EMAIL_HOST = os.getenv("EMAIL_HOST", "")
