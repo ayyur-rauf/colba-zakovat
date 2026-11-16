@@ -1,0 +1,29 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<p>Faylning birinchi qatori — sarlavhalar: <b>F.I.Sh.</b>, <b>Filial</b> (majburiy),
+  Lavozim, Telefon, Email, Telegram. Xato bo'lsa, hech narsa saqlanmaydi.</p>
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <input type="submit" value="Yuklash" class="default">
+</form>
+
+{% if report %}
+  <h2>Natija</h2>
+  <p>{{ report.summary }}</p>
+  {% if report.errors %}
+    <h3>Xatolar</h3>
+    <table>
+      <tr><th>Qator</th><th>Sabab</th></tr>
+      {% for row, reason in report.errors %}<tr><td>{{ row }}</td><td>{{ reason }}</td></tr>{% endfor %}
+    </table>
+  {% endif %}
+  {% if report.warnings %}
+    <h3>Ogohlantirishlar</h3>
+    <table>
+      <tr><th>Qator</th><th>Sabab</th></tr>
+      {% for row, reason in report.warnings %}<tr><td>{{ row }}</td><td>{{ reason }}</td></tr>{% endfor %}
+    </table>
+  {% endif %}
+{% endif %}
+{% endblock %}

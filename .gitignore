@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+backend/db.sqlite3
+backend/media/
+backend/private_media/
+backend/staticfiles/
+node_modules/
+.next/
+backend/dev_login.txt
