@@ -87,11 +87,14 @@ class EmailRequestCodeView(AuthView):
         s = EmailRequestSerializer(data=request.data)
         s.is_valid(raise_exception=True)
         try:
-            svc.request_email_code(s.validated_data["email"], allow_unknown=self.linking(request))
+            code = svc.request_email_code(s.validated_data["email"], allow_unknown=self.linking(request))
         except svc.AuthError as exc:
             return auth_error(exc)
         # Email ro'yxatda bormi-yo'qmi — oshkor qilinmaydi
-        return Response({"detail": "Agar bu email ro'yxatda bo'lsa, unga kod yuborildi."})
+        data = {"detail": "Agar bu email ro'yxatda bo'lsa, unga kod yuborildi."}
+        if code and svc.dev_codes_visible():
+            data["dev_code"] = code  # faqat DEBUG + konsol pochta
+        return Response(data)
 
 
 class EmailVerifyView(AuthView):

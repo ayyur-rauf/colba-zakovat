@@ -19,7 +19,7 @@ from django.core.files.base import ContentFile
 from accounts.models import Branch, Employee, User
 from kitobxonlik import services as ksvc
 from kitobxonlik.models import Book, ReadingRound, SeasonConfig
-from core.models import PointsEntry, Season
+from core.models import Module, PointsEntry, Role, RoleAssignment, Season
 from zakovat import services as svc
 from zakovat.models import Game, Team
 
@@ -208,10 +208,27 @@ class Command(BaseCommand):
         svc.decide_appeal(appeal, admin, accept=True, reason="Javob ma'nosi to'g'ri javobga mos")
         svc.finalize_game(oct_game, admin)
 
-        # 2-tur (noyabr): ro'yxatdan o'tish ochiq
+        # 2-tur (noyabr): 3 jamoa tasdiqlangan, o'yin hisob hay'ati sahifasidan boshlanadi
         svc.open_registration(nov_game, admin)
         for t in teams[:3]:
-            svc.register_team(nov_game, t, t.captain, now=nov_game.starts_at - timedelta(days=5))
+            reg = svc.register_team(nov_game, t, t.captain, now=nov_game.starts_at - timedelta(days=5))
+            svc.approve_registration(reg, admin)
+
+        # Sayt orqali kirish uchun demo tashkilotchi (email kod bilan)
+        staff_emp = Employee.objects.create(full_name="Demo Tashkilotchi", branch=branches[0],
+                                            position="Tashkiliy guruh", email="tg@demo.colba.uz")
+        staff = User(username="demo_tg", employee=staff_emp, display_name=staff_emp.full_name,
+                     status=User.Status.ACTIVE)
+        staff.set_unusable_password()
+        staff.save()
+        for role, module in ((Role.TG_MEMBER, Module.ZAKOVAT), (Role.SCORER, Module.ZAKOVAT),
+                             (Role.ORGANIZER, Module.KITOBXONLIK)):
+            RoleAssignment.objects.create(user=staff, role=role, module=module, granted_by=admin)
+        with open(settings.BASE_DIR / "dev_login.txt", "a", encoding="utf-8") as f:
+            f.write("\nSayt (http://localhost:3100) — email kod bilan kirish:\n"
+                    "  tashkilotchi / hisob hay'ati: tg@demo.colba.uz\n"
+                    "  oddiy xodim (Bilimdonlar sardori): xodim1@demo.colba.uz\n"
+                    "  Mahalliy rejimda kod sahifada avtomatik ko'rinadi.\n")
 
         self._seed_kitobxonlik(season, admin, users, at)
 

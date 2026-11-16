@@ -11,7 +11,8 @@ backend/        Django + DRF (API va admin panel)
   accounts/     filial, xodimlar ro'yxati, akkaunt, kirish (Telegram, Google, email kod)
 docs/           texnik topshiriq
 ```
-Keyingi qismlar: `web/` (Next.js), `mobile/` (Expo).
+web/            Next.js sayt (hisob hay'ati jadvali, katta ekran, kirish) — web/README.md
+Keyingi qism: `mobile/` (Expo).
 
 ## Ishga tushirish (Windows, mahalliy)
 ```powershell

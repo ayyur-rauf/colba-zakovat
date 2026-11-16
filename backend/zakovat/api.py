@@ -73,6 +73,7 @@ def game_brief(g: Game, my_team=None) -> dict:
         "starts_at": g.starts_at, "venue": g.venue, "max_teams": g.max_teams,
         "registration_deadline": g.effective_deadline,
         "rounds": g.rounds, "questions_per_round": g.questions_per_round,
+        "hide_standings": g.hide_standings,
         "approved_teams": g.registrations.filter(status=GameRegistration.Status.APPROVED).count(),
     }
     if my_team is not None:
@@ -167,6 +168,7 @@ class GameUpdateSer(serializers.Serializer):
     registration_deadline = serializers.DateTimeField(required=False, allow_null=True)
     rounds = serializers.IntegerField(min_value=1, max_value=10, required=False)
     questions_per_round = serializers.IntegerField(min_value=1, max_value=50, required=False)
+    hide_standings = serializers.BooleanField(required=False)
     reason = serializers.CharField(required=False, allow_blank=True, default="")
 
 

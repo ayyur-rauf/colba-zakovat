@@ -87,6 +87,15 @@ class AuthTests(TestCase):
                              format="json")
         self.assertEqual(r.status_code, 400)
 
+    def test_dev_code_never_returned_with_real_mail_backend(self):
+        r = self.client.post("/api/auth/email/request-code/", {"email": "vali@colba.uz"}, format="json")
+        self.assertNotIn("dev_code", r.data)  # locmem pochta — kod javobda yo'q
+
+    @override_settings(DEBUG=True, EMAIL_BACKEND="django.core.mail.backends.console.EmailBackend")
+    def test_dev_code_returned_only_in_local_console_mode(self):
+        r = self.client.post("/api/auth/email/request-code/", {"email": "vali@colba.uz"}, format="json")
+        self.assertRegex(r.data["dev_code"], r"^\d{6}$")
+
     def test_email_unknown_gets_no_code_but_same_answer(self):
         r = self.client.post("/api/auth/email/request-code/", {"email": "x@y.uz"}, format="json")
         self.assertEqual(r.status_code, 200)

@@ -267,10 +267,10 @@ def generate_league_schedule(season, actor, *, start_time=time(15, 0), venue="",
 def update_game(game, actor, *, reason="", now=None, **changes) -> Game:
     """Sana, vaqt, joy va h.k. o'zgarishi. [N-1.4] o'yinga 1 kundan kam qolganda sababi majburiy."""
     _require(is_tg(actor, game.season))
-    if game.status in (Game.Status.FINAL, Game.Status.CANCELLED):
+    if game.status in (Game.Status.FINAL, Game.Status.CANCELLED) and set(changes) != {"hide_standings"}:
         raise RuleError("Yakunlangan yoki bekor qilingan o'yinni o'zgartirib bo'lmaydi.")
     allowed = {"title", "starts_at", "venue", "max_teams", "registration_deadline", "rounds",
-               "questions_per_round"}
+               "questions_per_round", "hide_standings"}
     bad = set(changes) - allowed
     if bad:
         raise RuleError(f"Bu maydonlarni o'zgartirib bo'lmaydi: {', '.join(sorted(bad))}")

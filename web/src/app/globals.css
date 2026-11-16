@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f6f7f9;
+  --foreground: #14181f;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-brand-50: #eef6ff;
+  --color-brand-100: #d9eaff;
+  --color-brand-500: #2f6fed;
+  --color-brand-600: #2259cc;
+  --color-brand-700: #1c47a3;
+  --font-sans: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+/* Hisobga olinmaydigan katak (3 o'yinchidan kam) */
+.cell-uncounted {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0 4px,
+    rgb(0 0 0 / 0.06) 4px 8px
+  );
+}

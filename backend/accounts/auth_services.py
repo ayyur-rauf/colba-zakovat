@@ -101,16 +101,16 @@ def email_is_known(email: str) -> bool:
             or AuthIdentity.objects.filter(provider=AuthIdentity.Provider.EMAIL, uid=email).exists())
 
 
-def request_email_code(email: str, *, allow_unknown=False) -> bool:
+def request_email_code(email: str, *, allow_unknown=False) -> str | None:
     """Kod yuboradi. Noma'lum email uchun hech narsa yubormaydi (lekin xatoni ham oshkor qilmaydi).
 
-    Qaytaradi: kod yuborildimi.
+    Qaytaradi: yuborilgan kod (faqat mahalliy ishlab chiqishda ko'rsatish uchun) yoki None.
     """
     email = normalize_email(email)
     if not email:
         raise AuthError("Email kiritilmagan.")
     if not allow_unknown and not email_is_known(email):
-        return False
+        return None
     hour_ago = timezone.now() - timedelta(hours=1)
     if EmailLoginCode.objects.filter(email=email, created_at__gte=hour_ago).count() >= settings.EMAIL_CODE_MAX_PER_HOUR:
         raise AuthError("Juda ko'p urinish. Birozdan keyin qayta urinib ko'ring.")
@@ -126,7 +126,12 @@ def request_email_code(email: str, *, allow_unknown=False) -> bool:
         "Agar siz so'ramagan bo'lsangiz, bu xatni e'tiborsiz qoldiring.",
         settings.DEFAULT_FROM_EMAIL, [email],
     )
-    return True
+    return code
+
+
+def dev_codes_visible() -> bool:
+    """Pochta sozlanmagan mahalliy rejimda kod javobda qaytariladi (serverda hech qachon)."""
+    return settings.DEBUG and settings.EMAIL_BACKEND.endswith("console.EmailBackend")
 
 
 def check_email_code(email: str, code: str) -> str:
