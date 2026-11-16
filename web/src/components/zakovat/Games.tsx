@@ -4,6 +4,7 @@
 
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { downloadFile } from "@/lib/download";
 import { useAction, useApi, usePerms } from "@/lib/hooks";
 import { REG_STATUS, type Game, type Registration } from "@/lib/types";
 import { Badge, Button, Card, CardHeader, Empty, Field, formatDate, LinkButton, Notice, PageTitle } from "../ui";
@@ -120,6 +121,15 @@ export default function ZakovatGames() {
                     <LinkButton href={`/ekran/${g.id}`} target="_blank">
                       Ekran ↗
                     </LinkButton>
+                  )}
+                  {(g.status === "final" || g.status === "preliminary") && (
+                    <Button
+                      variant="ghost"
+                      title="Natijani Excel'ga yuklab olish"
+                      onClick={() => downloadFile(`zakovat/games/${g.id}/export`).catch((e) => act.setError(e.message))}
+                    >
+                      ⬇ Excel
+                    </Button>
                   )}
                   {tg && g.status !== "final" && g.status !== "cancelled" && (
                     <Button variant="ghost" title="Tahrirlash" onClick={() => setEditId(editId === g.id ? null : g.id)}>

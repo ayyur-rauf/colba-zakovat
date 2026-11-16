@@ -15,5 +15,6 @@ urlpatterns = [
     path("registrations/<int:pk>/approve/", api.RegistrationApproveView.as_view(), name="zakovat-reg-approve"),
     path("appeals/<int:pk>/decide/", api.AppealDecideView.as_view(), name="zakovat-appeal-decide"),
     path("standings/", api.StandingsView.as_view(), name="zakovat-standings"),
+    path("standings/export/", api.StandingsExportView.as_view(), name="zakovat-standings-export"),
     path("season-tiebreak/", api.SeasonTiebreakView.as_view(), name="zakovat-season-tiebreak"),
 ] + router.urls

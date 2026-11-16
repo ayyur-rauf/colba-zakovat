@@ -13,6 +13,7 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSet
 
 from accounts.models import User
+from core.exports import xlsx_response
 from core.models import Season
 
 from . import services as svc
@@ -387,6 +388,32 @@ class GameViewSet(ViewSet):
         return Response(game_brief(game, svc._user_team(game.season, request.user)))
 
     @action(detail=True, methods=["get"])
+    def export(self, request, pk):
+        """O'yin natijasi Excel'da: jamoalar × savollar va savol reytinglari."""
+        game = self._game(pk)
+        if game.status not in RESULTS_VISIBLE and not svc.is_scorer(request.user, game.season):
+            raise svc.RuleError("Natija hali e'lon qilinmagan.")
+        score = svc.compute(game)
+        tables = dict(game.registrations.values_list("team_id", "table_number"))
+        names = dict(Team.objects.filter(pk__in=score.teams).values_list("pk", "name"))
+        marks = {}
+        for m in game.marks.all():
+            marks[(m.team_id, m.number)] = m.correct
+        nq = game.total_questions
+        rows = []
+        for ts in score.ranking():
+            rows.append([ts.place, tables.get(ts.team_id), names[ts.team_id], ts.points, ts.rating_j,
+                         "ha" if ts.eligible else "yo'q"]
+                        + [("" if (ts.team_id, q) not in marks else (1 if marks[(ts.team_id, q)] else 0))
+                           for q in range(1, nq + 1)])
+        qrows = [[q, score.question_rating[q], sum(1 for t in score.teams.values() if q in t.correct)]
+                 for q in range(1, nq + 1)]
+        return xlsx_response(f"{game.title} natija.xlsx", [
+            ("Natija", ["O'rin", "Stol", "Jamoa", "Ball", "J", "Hisobga olinadi"] + [str(q) for q in range(1, nq + 1)], rows),
+            ("Savollar", ["Savol", "Reyting R", "To'g'ri javoblar"], qrows),
+        ])
+
+    @action(detail=True, methods=["get"])
     def results(self, request, pk):
         game = self._game(pk)
         if game.status not in RESULTS_VISIBLE and not svc.is_scorer(request.user, game.season):
@@ -688,3 +715,22 @@ class QuestionViewSet(ViewSet):
     def destroy(self, request, pk):
         svc.delete_question(request.user, get_object_or_404(Question, pk=pk))
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+class StandingsExportView(APIView):
+    def get(self, request):
+        season = get_season(request)
+        bd = svc.season_breakdown(season)
+        games = bd["games"]
+        rows = []
+        for r in svc.season_standings(season):
+            d = bd["teams"].get(r["team"].pk, {"by_game": {}, "played": 0, "wins": 0, "other_points": 0})
+            rows.append([r["place"] or "—", r["team"].name]
+                        + [(d["by_game"].get(g.pk) or {}).get("points", "") for g in games]
+                        + [d["other_points"] or "", r["points"], r["rating_j"], d["played"], d["wins"]])
+        return xlsx_response(f"Mavsum reytingi {season.name}.xlsx", [(
+            "Reyting",
+            ["O'rin", "Jamoa"] + [g.title for g in games] + ["Tuzatish", "Jami ball", "J", "Turlar", "G'alabalar"],
+            rows,
+        )])

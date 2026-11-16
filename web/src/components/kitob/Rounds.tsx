@@ -5,11 +5,13 @@
 import Link from "next/link";
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { downloadFile } from "@/lib/download";
 import { useAction, useApi, usePerms } from "@/lib/hooks";
 import type { Book, ReadingRound } from "@/lib/types";
 import { Button, Card, CardHeader, Empty, Field, formatDate, Notice, PageTitle } from "../ui";
 import AnnouncementsFeed from "../Announcements";
 import { openProtectedFile, RoundStatusBadge } from "./common";
+import MissingPanel from "./Missing";
 
 const STEPS = ["draft", "voting", "reading", "grading", "done"] as const;
 const STEP_TITLE = ["Qoralama", "Ovoz", "O'qish", "Baholash", "Yakun"];
@@ -200,8 +202,18 @@ function RoundCard({ r, org, act, reload }: { r: ReadingRound; org: boolean; act
                 </div>
               )}
               {r.status === "done" && <span className="text-success">Tur yakunlangan, ballar yozilgan ✓</span>}
+              {(r.status === "grading" || r.status === "done") && (
+                <Button
+                  variant="ghost"
+                  className="mt-3"
+                  onClick={() => downloadFile(`kitob/rounds/${r.id}/export`).catch((e) => act.setError(e.message))}
+                >
+                  ⬇ Natijalar Excel
+                </Button>
+              )}
             </div>
           )}
+          {org && (r.status === "reading" || r.status === "grading") && <MissingPanel roundId={r.id} deadline={r.my_deadline} />}
         </div>
       </div>
     </Card>

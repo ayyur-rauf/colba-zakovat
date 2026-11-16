@@ -54,6 +54,26 @@ export default function ZakovatTeams() {
               <Button variant="ghost" onClick={() => setOpen(open === t.id ? null : t.id)}>
                 Tarkib {open === t.id ? "▴" : "▾"}
               </Button>
+              {zakovatTg && t.status === "active" && (
+                <Button
+                  variant="ghost"
+                  disabled={act.busy}
+                  onClick={() => {
+                    const reason = window.prompt(
+                      `"${t.name}" jamoasini chetlatish sababi (Nizom 3.8).\nDiqqat: jamoaning mavsumdagi barcha ballari nolga tushadi (Nizom 3.9).`,
+                    );
+                    if (reason?.trim())
+                      act
+                        .run(
+                          () => api(`zakovat/teams/${t.id}/withdraw`, { method: "POST", body: { reason, disqualify: true } }),
+                          `${t.name} chetlatildi`,
+                        )
+                        .then(teams.reload);
+                  }}
+                >
+                  Chetlatish
+                </Button>
+              )}
               {zakovatTg && t.status === "pending" && (
                 <Button
                   variant="success"

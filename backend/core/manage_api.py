@@ -18,8 +18,8 @@ from accounts.importer import ImportFormatError, import_employees
 from accounts.models import Branch, Employee, User, mask_phone
 
 from .api import RuleError
-from .models import Announcement, AuditLog, Module, Role, RoleAssignment, Season
-from .services import has_role, log_action
+from .models import Announcement, AuditLog, Module, PointsEntry, Role, RoleAssignment, Season
+from .services import add_points, has_role, log_action
 
 
 def is_admin(user) -> bool:
@@ -398,3 +398,187 @@ class AnnouncementDetailView(APIView):
         log_action(request.user, "announcement.deleted", a, before={"title": a.title})
         a.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ================================================================== ball reestri
+
+def _season(request):
+    sid = request.query_params.get("season")
+    s = Season.objects.filter(pk=sid).first() if sid else Season.current()
+    if s is None:
+        raise RuleError("Faol mavsum yo'q.")
+    return s
+
+
+def _subject_names(entries):
+    from zakovat.models import Team
+    team_ids = {e.subject_id for e in entries if e.subject_type == PointsEntry.Subject.TEAM}
+    user_ids = {e.subject_id for e in entries if e.subject_type == PointsEntry.Subject.USER}
+    teams = dict(Team.objects.filter(pk__in=team_ids).values_list("pk", "name"))
+    users = {u.pk: str(u) for u in User.objects.filter(pk__in=user_ids).select_related("employee")}
+    return teams, users
+
+
+def _reason_labels(entries):
+    from kitobxonlik.models import Review
+    from zakovat.models import Game
+    game_ids = {int(e.reason_id) for e in entries if e.reason_type == "zakovat.game" and e.reason_id.isdigit()}
+    review_ids = {int(e.reason_id) for e in entries if e.reason_type == "kitobxonlik.review" and e.reason_id.isdigit()}
+    games = dict(Game.objects.filter(pk__in=game_ids).values_list("pk", "title"))
+    rounds = dict(Review.objects.filter(pk__in=review_ids).values_list("pk", "round__title"))
+
+    def label(e):
+        if e.reason_type == "zakovat.game":
+            return "O'yin: " + str(games.get(int(e.reason_id), e.reason_id))
+        if e.reason_type == "zakovat.team_out":
+            return "Jamoa chiqdi / chetlatildi"
+        if e.reason_type == "kitobxonlik.review":
+            return "Kitobxonlik: " + str(rounds.get(int(e.reason_id), e.reason_id))
+        if e.reason_type == "manual":
+            return "Qo'lda tuzatish"
+        return e.reason_type
+    return label
+
+
+class PointsCorrectionSer(serializers.Serializer):
+    module = serializers.ChoiceField(choices=[Module.ZAKOVAT, Module.KITOBXONLIK])
+    subject_type = serializers.ChoiceField(choices=PointsEntry.Subject.choices)
+    subject_id = serializers.IntegerField()
+    amount = serializers.IntegerField(min_value=-1000, max_value=1000)
+    note = serializers.CharField(max_length=300)
+
+
+class PointsView(AdminView):
+    """GET ?season= &module= &subject_type= &q= — oxirgi 300 yozuv. POST — qo'lda tuzatish (sabab majburiy)."""
+
+    def get(self, request):
+        season = _season(request)
+        p = request.query_params
+        qs = PointsEntry.objects.filter(season=season).select_related("created_by__employee")
+        if p.get("module"):
+            qs = qs.filter(module=p["module"])
+        if p.get("subject_type"):
+            qs = qs.filter(subject_type=p["subject_type"])
+        entries = list(qs.order_by("-created_at", "-id")[:1000])
+        teams, users = _subject_names(entries)
+        label = _reason_labels(entries)
+        q = (p.get("q") or "").lower()
+        items = []
+        for e in entries:
+            names = teams if e.subject_type == PointsEntry.Subject.TEAM else users
+            name = names.get(e.subject_id, "#" + str(e.subject_id))
+            if q and q not in name.lower():
+                continue
+            items.append({
+                "id": e.pk, "created_at": e.created_at, "module": e.module, "subject_type": e.subject_type,
+                "subject_id": e.subject_id, "subject": name, "amount": e.amount, "reason": label(e),
+                # izoh sababdagi nom bilan bir xil bo'lsa (o'yin/tur nomi) — takrorlamaymiz
+                "note": "" if e.note and e.note in label(e) else e.note,
+                "by": str(e.created_by) if e.created_by_id else "Tizim",
+            })
+        return Response({"season": {"id": season.pk, "name": season.name}, "items": items[:300]})
+
+    def post(self, request):
+        d = validated(PointsCorrectionSer, request.data)
+        season = _season(request)
+        if not d["note"].strip():
+            raise RuleError("Tuzatish sababini yozing.")
+        if d["amount"] == 0:
+            raise RuleError("Ball 0 bo'lmasligi kerak.")
+        if d["subject_type"] == PointsEntry.Subject.TEAM:
+            from zakovat.models import Team
+            get_object_or_404(Team, pk=d["subject_id"], season=season)
+        else:
+            get_object_or_404(User, pk=d["subject_id"])
+        e = add_points(season=season, module=d["module"], subject_type=d["subject_type"], subject_id=d["subject_id"],
+                       amount=d["amount"], reason_type="manual", note=d["note"].strip(), actor=request.user)
+        log_action(request.user, "points.manual", e, after={"amount": e.amount, "subject": e.subject_id}, note=e.note)
+        return Response({"id": e.pk}, status=status.HTTP_201_CREATED)
+
+
+class SubjectSearchView(AdminView):
+    """Tuzatish uchun: ?type=team|user &q="""
+
+    def get(self, request):
+        season = _season(request)
+        q = (request.query_params.get("q") or "").strip()
+        if request.query_params.get("type") == "team":
+            from zakovat.models import Team
+            qs = Team.objects.filter(season=season)
+            if q:
+                qs = qs.filter(name__icontains=q)
+            return Response([{"id": t.pk, "name": t.name} for t in qs.order_by("name")[:20]])
+        qs = User.objects.filter(status=User.Status.ACTIVE, employee__isnull=False).select_related("employee__branch")
+        if q:
+            qs = qs.filter(employee__full_name__icontains=q)
+        return Response([{"id": u.pk, "name": str(u), "branch": u.employee.branch.name} for u in qs[:20]])
+
+
+# ================================================================== Yil sarhisobi
+
+def build_summary(season) -> dict:
+    from kitobxonlik.models import ReadingRound, Review
+    from kitobxonlik.services import leaderboard
+    from zakovat.models import Game, TeamMember
+    from zakovat.services import season_standings
+
+    standings = season_standings(season)
+    top_teams = []
+    for r in [s for s in standings if s["place"]][:3]:
+        members = TeamMember.objects.filter(team=r["team"], status="active").select_related("user__employee")
+        top_teams.append({"place": r["place"], "team": r["team"].name, "points": r["points"], "rating_j": r["rating_j"],
+                          "members": [str(m.user) for m in members]})
+    readers = leaderboard(season)
+
+    players = set(TeamMember.objects.filter(season=season, status="active").values_list("user_id", flat=True))
+    reviewers = set(Review.objects.filter(round__season=season).values_list("user_id", flat=True))
+    kitob_points = {}
+    for e in PointsEntry.objects.filter(season=season, module=Module.KITOBXONLIK, subject_type=PointsEntry.Subject.USER):
+        kitob_points[e.subject_id] = kitob_points.get(e.subject_id, 0) + e.amount
+    branches = []
+    for b in Branch.objects.all():
+        emp_users = set(User.objects.filter(employee__branch=b, employee__is_active=True).values_list("pk", flat=True))
+        staff = Employee.objects.filter(branch=b, is_active=True).count()
+        anyp = len((players | reviewers) & emp_users)
+        branches.append({"branch": b.name, "employees": staff, "zakovat_players": len(players & emp_users),
+                         "readers": len(reviewers & emp_users), "participants": anyp,
+                         "participation": round(100 * anyp / staff) if staff else 0,
+                         "kitob_points": sum(kitob_points.get(u, 0) for u in emp_users)})
+    branches.sort(key=lambda x: (-x["participation"], x["branch"]))
+    return {
+        "season": {"id": season.pk, "name": season.name, "start": season.start_date, "end": season.end_date},
+        "zakovat": {
+            "games_played": Game.objects.filter(season=season, kind=Game.Kind.LEAGUE, status=Game.Status.FINAL).count(),
+            "teams": len([s for s in standings if s["place"]]),
+            "players": len(players),
+            "top": top_teams,
+        },
+        "kitobxonlik": {
+            "rounds_done": ReadingRound.objects.filter(season=season, status=ReadingRound.Status.DONE).count(),
+            "reviews": Review.objects.filter(round__season=season).count(),
+            "readers": len(reviewers),
+            "top": readers[:10],
+        },
+        "branches": branches,
+    }
+
+
+class SummaryView(AdminView):
+    def get(self, request):
+        return Response(build_summary(_season(request)))
+
+
+class SummaryExportView(AdminView):
+    def get(self, request):
+        from core.exports import xlsx_response
+        s = build_summary(_season(request))
+        return xlsx_response("Yil sarhisobi " + s["season"]["name"] + ".xlsx", [
+            ("Zakovat g'oliblari", ["O'rin", "Jamoa", "Ball", "J", "Tarkib"],
+             [[t["place"], t["team"], t["points"], t["rating_j"], ", ".join(t["members"])] for t in s["zakovat"]["top"]]),
+            ("Kitobxonlar", ["O'rin", "Xodim", "Filial", "Ball"],
+             [[r["place"], r["user"]["name"], r["user"]["branch"], r["points"]] for r in s["kitobxonlik"]["top"]]),
+            ("Filiallar", ["Filial", "Xodimlar", "Zakovat o'yinchilari", "Kitobxonlar", "Ishtirokchilar", "Ishtirok %",
+                           "Kitobxonlik ballari"],
+             [[b["branch"], b["employees"], b["zakovat_players"], b["readers"], b["participants"], b["participation"],
+               b["kitob_points"]] for b in s["branches"]]),
+        ])

@@ -14,6 +14,10 @@ urlpatterns = [
     path("manage/seasons/", m.SeasonsView.as_view()),
     path("manage/seasons/<int:pk>/activate/", m.SeasonActivateView.as_view()),
     path("manage/audit/", m.AuditView.as_view()),
+    path("manage/points/", m.PointsView.as_view()),
+    path("manage/points/subjects/", m.SubjectSearchView.as_view()),
+    path("manage/summary/", m.SummaryView.as_view()),
+    path("manage/summary/export/", m.SummaryExportView.as_view()),
     path("announcements/", m.AnnouncementsView.as_view()),
     path("announcements/<int:pk>/", m.AnnouncementDetailView.as_view()),
 ]

@@ -5,15 +5,18 @@
 
 import Link from "next/link";
 import { Fragment, useState } from "react";
-import { useApi } from "@/lib/hooks";
+import { downloadFile } from "@/lib/download";
+import { useApi, usePerms } from "@/lib/hooks";
 import type { SeasonStandings, StandingRow } from "@/lib/types";
 import { Badge, Card, CardHeader, Empty, formatDate, Notice, PageTitle, Stat } from "../ui";
 import { PlaceCell, TeamStatusBadge } from "./common";
+import TiebreakPanel, { groupTies } from "./Tiebreak";
 
 export default function ZakovatStandings() {
   const st = useApi<SeasonStandings>("zakovat/standings");
   const [open, setOpen] = useState<number | null>(null);
   const [help, setHelp] = useState(false);
+  const { zakovatTg } = usePerms();
 
   const games = st.data?.games ?? [];
   const rows = st.data?.rows ?? [];
@@ -31,9 +34,17 @@ export default function ZakovatStandings() {
         title="Mavsum reytingi"
         subtitle={st.data?.season.name}
         actions={
-          <button onClick={() => setHelp(!help)} className="text-sm text-accent hover:underline">
-            {help ? "Yopish" : "Ballar qanday hisoblanadi?"}
-          </button>
+          <>
+            <button onClick={() => setHelp(!help)} className="text-sm text-accent hover:underline">
+              {help ? "Yopish" : "Ballar qanday hisoblanadi?"}
+            </button>
+            <button
+              onClick={() => downloadFile("zakovat/standings/export").catch((e) => st.setError(e.message))}
+              className="rounded-[10px] border border-line px-3 py-1.5 text-sm hover:bg-surface-2"
+            >
+              ⬇ Excel
+            </button>
+          </>
         }
       />
       <Notice error={st.error} onClose={() => st.setError(null)} />
@@ -70,7 +81,8 @@ export default function ZakovatStandings() {
         </div>
       )}
 
-      {ties && (
+      {ties && zakovatTg && <TiebreakPanel ties={groupTies(ranked)} endpoint="zakovat/season-tiebreak" onCreated={st.reload} />}
+      {ties && !zakovatTg && (
         <div className="rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning">
           &quot;=&quot; belgili jamoalarning bali ham, J si ham teng — ular o&apos;rtasida qo&apos;shimcha o&apos;yin o&apos;tkaziladi.
         </div>

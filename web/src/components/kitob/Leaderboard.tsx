@@ -2,9 +2,10 @@
 
 // Kitobxonlik — mavsum reytingi (shaxsiy ballar).
 
+import { downloadFile } from "@/lib/download";
 import { useApi } from "@/lib/hooks";
 import type { LeaderRow } from "@/lib/types";
-import { Card, Empty, PageTitle } from "../ui";
+import { Button, Card, Empty, PageTitle } from "../ui";
 
 export default function KitobLeaderboard() {
   const lb = useApi<LeaderRow[]>("kitob/leaderboard");
@@ -13,7 +14,17 @@ export default function KitobLeaderboard() {
 
   return (
     <>
-      <PageTitle title="Kitobxonlar reytingi" subtitle="Mavsum davomida tasdiqlangan izohlar uchun ballar" />
+      <PageTitle
+        title="Kitobxonlar reytingi"
+        subtitle="Mavsum davomida tasdiqlangan izohlar uchun ballar"
+        actions={
+          !lb.error && (
+            <Button variant="ghost" onClick={() => downloadFile("kitob/leaderboard/export").catch((e) => lb.setError(e.message))}>
+              ⬇ Excel
+            </Button>
+          )
+        }
+      />
       {lb.error ? (
         <Card>
           <Empty>{lb.error}</Empty>

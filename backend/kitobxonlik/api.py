@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSet
 
 from accounts.models import User
+from core.exports import xlsx_response
 from core.models import Season
 
 from . import services as svc
@@ -229,6 +230,46 @@ class RoundViewSet(ViewSet):
         return Response({"approved": n})
 
     @action(detail=True, methods=["get"])
+    def missing(self, request, pk):
+        """Izoh yubormagan faol xodimlar (tashkilotchi uchun)."""
+        rnd = self._round(pk)
+        if not svc.is_organizer(request.user, rnd.season):
+            raise PermissionDenied()
+        submitted = set(rnd.reviews.values_list("user_id", flat=True))
+        ext = {e.user_id: e.until for e in rnd.extensions.all()}
+        users = (User.objects.filter(status=User.Status.ACTIVE, employee__isnull=False, employee__is_active=True)
+                 .exclude(pk__in=submitted).select_related("employee__branch").order_by("employee__full_name"))
+        return Response({
+            "submitted": len(submitted),
+            "items": [{"id": u.pk, "name": str(u), "branch": u.employee.branch.name, "extended_until": ext.get(u.pk)}
+                      for u in users],
+        })
+
+    @action(detail=True, methods=["get"])
+    def export(self, request, pk):
+        rnd = self._round(pk)
+        if not svc.is_organizer(request.user, rnd.season):
+            raise PermissionDenied()
+        criteria = list(rnd.criteria.all())
+        rows = []
+        for r in rnd.reviews.select_related("user__employee__branch").prefetch_related("grades__scores"):
+            per = {}
+            for g in r.grades.all():
+                for sc in g.scores.all():
+                    per.setdefault(sc.criterion_id, []).append(sc.points)
+            avg = svc.average_score(r)
+            rows.append([str(r.user), r.user.employee.branch.name if r.user.employee_id else "",
+                         r.submitted_at.strftime("%d.%m.%Y %H:%M"), r.get_status_display(), r.grades.count()]
+                        + [round(sum(per[c.pk]) / len(per[c.pk]), 2) if per.get(c.pk) else "" for c in criteria]
+                        + [float(r.final_score) if r.final_score is not None else (float(avg) if avg is not None else "")])
+        return xlsx_response(f"{rnd.title} natija.xlsx", [(
+            "Izohlar",
+            ["Xodim", "Filial", "Yuborilgan", "Holat", "Baholar soni"] + [f"{c.name} (/{c.max_points})" for c in criteria]
+            + ["Yakuniy ball"],
+            rows,
+        )])
+
+    @action(detail=True, methods=["get"])
     def reviews(self, request, pk):
         """Tekshiruvchi va tashkilotchi uchun izohlar ro'yxati (muallif va o'rtacha ball bilan).
         O'z izohi ro'yxatga kirmaydi."""
@@ -273,3 +314,14 @@ class LeaderboardView(APIView):
         if not svc.leaderboard_visible(season, request.user):
             raise PermissionDenied("Reyting jadvali hozircha yopiq.")
         return Response(svc.leaderboard(season))
+
+
+
+class LeaderboardExportView(APIView):
+    def get(self, request):
+        season = get_season(request)
+        if not svc.leaderboard_visible(season, request.user):
+            raise PermissionDenied("Reyting jadvali hozircha yopiq.")
+        rows = [[r["place"], r["user"]["name"], r["user"]["branch"], r["points"]] for r in svc.leaderboard(season)]
+        return xlsx_response(f"Kitobxonlar reytingi {season.name}.xlsx",
+                             [("Reyting", ["O'rin", "Xodim", "Filial", "Ball"], rows)])

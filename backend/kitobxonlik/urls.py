@@ -12,4 +12,5 @@ urlpatterns = [
     path("reviews/<int:pk>/grade/", api.GradeView.as_view(), name="kitob-review-grade"),
     path("my-card/", api.MyCardView.as_view(), name="kitob-my-card"),
     path("leaderboard/", api.LeaderboardView.as_view(), name="kitob-leaderboard"),
+    path("leaderboard/export/", api.LeaderboardExportView.as_view(), name="kitob-leaderboard-export"),
 ] + router.urls

@@ -7,11 +7,13 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
-import { errText, usePerms } from "@/lib/hooks";
+import { downloadFile } from "@/lib/download";
+import { errText, useApi, usePerms } from "@/lib/hooks";
 import { usePolling } from "@/lib/usePolling";
 import type { Appeal, Sheet, SheetTeam } from "@/lib/types";
 import { Badge, Button, Card, CardHeader, Empty, LinkButton, Notice } from "../ui";
 import { GameStatusBadge, PlaceCell } from "./common";
+import TiebreakPanel, { groupTies } from "./Tiebreak";
 
 const POLL_MS = 4000;
 const MAX_ON_STAGE = 6;
@@ -19,7 +21,10 @@ const MIN_PLAYERS = 3;
 
 export default function ScoreSheet() {
   const { id } = useParams<{ id: string }>();
-  const { zakovatTg: isTg } = usePerms();
+  const { zakovatTg: isTg, admin } = usePerms();
+  const results = useApi<{ rows: { place: number | null; tie_group: number | null; team: { id: number; name: string } }[] }>(
+    `zakovat/games/${id}/results`,
+  );
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const [round, setRound] = useState<number | null>(null);
   const [appeals, setAppeals] = useState<Appeal[]>([]);
@@ -168,6 +173,22 @@ export default function ScoreSheet() {
               Dastlabki natijani e&apos;lon qilish
             </Button>
           )}
+          {(g.status === "final" || g.status === "preliminary") && (
+            <Button variant="ghost" onClick={() => downloadFile(`zakovat/games/${id}/export`).catch((e) => setError(e.message))}>
+              ⬇ Excel
+            </Button>
+          )}
+          {admin && g.status === "final" && (
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const reason = window.prompt("Yakuniy natijani qayta ochish sababi (faqat bosh admin). Ballar vaqtincha qaytariladi:");
+                if (reason?.trim()) run(() => api(`zakovat/games/${id}/reopen`, { method: "POST", body: { reason } }));
+              }}
+            >
+              ↺ Qayta ochish
+            </Button>
+          )}
           {isTg && g.status === "preliminary" && (
             <Button
               variant="success"
@@ -182,6 +203,10 @@ export default function ScoreSheet() {
       </div>
 
       <Notice error={error} onClose={() => setError(null)} />
+
+      {isTg && g.status === "final" && results.data && (
+        <TiebreakPanel ties={groupTies(results.data.rows)} endpoint={`zakovat/games/${id}/tiebreak`} onCreated={results.reload} />
+      )}
 
       {/* Raundlar va joriy savol */}
       <Card className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">

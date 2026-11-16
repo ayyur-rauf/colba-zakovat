@@ -43,6 +43,8 @@ node node_modules/next/dist/bin/next start -p 3101 -H 127.0.0.1
 | `/boshqaruv/roles` | rollarni berish va olish |
 | `/boshqaruv/seasons` | mavsumlar, joriy mavsum |
 | `/boshqaruv/announcements` | e'lonlar (bosh sahifa va modullarda ko'rinadi) |
+| `/boshqaruv/points` | ball reestri, qo'lda tuzatish (sabab bilan) |
+| `/boshqaruv/summary` | Yil sarhisobi: g'oliblar, filiallar kesimi, Excel |
 | `/boshqaruv/audit` | harakatlar jurnali |
 
 ## Tashqi ko'rinishni o'zgartirish

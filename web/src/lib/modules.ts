@@ -85,6 +85,8 @@ export const ADMIN_MODULE: ModuleDef = {
     { href: "/boshqaruv/roles", title: "Rollar" },
     { href: "/boshqaruv/seasons", title: "Mavsumlar" },
     { href: "/boshqaruv/announcements", title: "E'lonlar" },
+    { href: "/boshqaruv/points", title: "Ball reestri" },
+    { href: "/boshqaruv/summary", title: "Yil sarhisobi" },
     { href: "/boshqaruv/audit", title: "Jurnal" },
   ],
 };
