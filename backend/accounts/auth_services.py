@@ -10,6 +10,7 @@ Qoidalar:
 4. Bloklangan, nofaol yoki ishdan ketgan xodimning akkauntiga kirish yo'q.
 """
 import hashlib
+import logging
 import hmac
 import secrets
 import time
@@ -120,12 +121,16 @@ def request_email_code(email: str, *, allow_unknown=False) -> str | None:
         email=email, code_hash=_hash_code(email, code),
         expires_at=timezone.now() + timedelta(minutes=settings.EMAIL_CODE_TTL_MINUTES),
     )
-    send_mail(
-        "Colba platformasiga kirish kodi",
-        f"Kirish kodingiz: {code}\nKod {settings.EMAIL_CODE_TTL_MINUTES} daqiqa amal qiladi.\n"
-        "Agar siz so'ramagan bo'lsangiz, bu xatni e'tiborsiz qoldiring.",
-        settings.DEFAULT_FROM_EMAIL, [email],
-    )
+    try:
+        send_mail(
+            "Colba platformasiga kirish kodi",
+            f"Kirish kodingiz: {code}\nKod {settings.EMAIL_CODE_TTL_MINUTES} daqiqa amal qiladi.\n"
+            "Agar siz so'ramagan bo'lsangiz, bu xatni e'tiborsiz qoldiring.",
+            settings.DEFAULT_FROM_EMAIL, [email],
+        )
+    except Exception:  # noqa: BLE001 — pochta sozlanmagan yoki xizmat ishlamayapti
+        logging.getLogger(__name__).exception("Kirish kodi yuborilmadi: %s", email)
+        raise AuthError("Kodni yuborib bo'lmadi: pochta xizmati sozlanmagan yoki ishlamayapti. Admin bilan bog'laning.")
     return code
 
 

@@ -31,6 +31,13 @@ if not SECRET_KEY:
 
 ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", "localhost,127.0.0.1")
 
+# Railway: xizmatning ochiq domeni avtomatik qo'shiladi; healthcheck shu xost nomidan keladi.
+RAILWAY_PUBLIC_DOMAIN = os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
+if RAILWAY_PUBLIC_DOMAIN:
+    ALLOWED_HOSTS += [RAILWAY_PUBLIC_DOMAIN, "healthcheck.railway.app"]
+    if os.getenv("RAILWAY_PRIVATE_DOMAIN"):
+        ALLOWED_HOSTS.append(os.getenv("RAILWAY_PRIVATE_DOMAIN"))
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -48,6 +55,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # admin panel statik fayllari (serverda)
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -81,6 +89,7 @@ DATABASES = {
     "default": dj_database_url.parse(
         os.getenv("DATABASE_URL", "").strip() or f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
         conn_max_age=60,
+        conn_health_checks=True,
     )
 }
 
@@ -100,10 +109,18 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage" if DEBUG
+        else "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 MEDIA_URL = "media/"
-MEDIA_ROOT = BASE_DIR / "media"
+# Serverda fayllar doimiy diskda (Railway Volume) saqlanishi kerak: MEDIA_ROOT=/data/media
+MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", "").strip() or BASE_DIR / "media")
 # Ochiq URL'siz fayllar (PDF kitoblar, izoh fayllari) — faqat API orqali beriladi
-PRIVATE_MEDIA_ROOT = Path(os.getenv("PRIVATE_MEDIA_ROOT", BASE_DIR / "private_media"))
+PRIVATE_MEDIA_ROOT = Path(os.getenv("PRIVATE_MEDIA_ROOT", "").strip() or BASE_DIR / "private_media")
 FILE_UPLOAD_MAX_MB = 50
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -144,9 +161,13 @@ EMAIL_CODE_TTL_MINUTES = 10
 EMAIL_CODE_MAX_ATTEMPTS = 5
 EMAIL_CODE_MAX_PER_HOUR = 5
 
+# Pochta: BREVO_API_KEY berilsa — Brevo HTTP API (Railway'da SMTP portlari yopiq bo'lishi mumkin);
+# aks holda SMTP (EMAIL_HOST...) yoki mahalliy rejimda konsol.
+BREVO_API_KEY = os.getenv("BREVO_API_KEY", "").strip()
 EMAIL_BACKEND = os.getenv(
     "EMAIL_BACKEND",
-    "django.core.mail.backends.console.EmailBackend" if DEBUG
+    "core.email_backends.BrevoEmailBackend" if BREVO_API_KEY
+    else "django.core.mail.backends.console.EmailBackend" if DEBUG
     else "django.core.mail.backends.smtp.EmailBackend",
 )
 EMAIL_HOST = os.getenv("EMAIL_HOST", "")
@@ -160,4 +181,16 @@ if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
     CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS")
+    if RAILWAY_PUBLIC_DOMAIN:
+        CSRF_TRUSTED_ORIGINS.append(f"https://{RAILWAY_PUBLIC_DOMAIN}")
+
+# Loglar konsolga (Railway "Logs" bo'limida ko'rinadi)
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "root": {"handlers": ["console"], "level": "INFO" if not DEBUG else "WARNING"},
+    "loggers": {"django": {"handlers": ["console"], "level": os.getenv("DJANGO_LOG_LEVEL", "ERROR"), "propagate": False}},
+}

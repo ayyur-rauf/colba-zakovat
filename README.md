@@ -131,6 +131,9 @@ PDF kitoblar va izoh fayllari `backend/private_media/` da saqlanadi va faqat API
 `python manage.py seed_demo` — demo mavsum, 18 xodim, 4 jamoa, o'tkazilgan o'yin. Admin paroli `backend/dev_login.txt` da.
 Mahalliy server: http://127.0.0.1:8100/admin/
 
+## Serverga chiqarish
+Railway uchun qadamma-qadam qo'llanma: [docs/RAILWAY.md](docs/RAILWAY.md).
+
 ## Serverga chiqarish uchun eslatma
 - `DATABASE_URL=postgres://...` va `pip install "psycopg[binary]"`.
 - `DEBUG=0`, kuchli `SECRET_KEY`, `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, HTTPS.
